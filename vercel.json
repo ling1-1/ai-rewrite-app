@@ -3,11 +3,6 @@
   "framework": null,
   "buildCommand": "npm run build",
   "outputDirectory": "public",
-  "functions": {
-    "index.py": {
-      "includeFiles": "public/**"
-    }
-  },
   "rewrites": [
     {
       "source": "/:path((?!api/|assets/|.*\\..*).*)",
