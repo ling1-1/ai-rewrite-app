@@ -2,6 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "public",
+  "functions": {
+    "api/**/*.py": {
+      "runtime": "vercel-python@3.0.0"
+    }
+  },
   "routes": [
     {
       "src": "/api/(.*)",
