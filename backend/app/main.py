@@ -29,9 +29,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(rewrite.router, prefix="/api/rewrite", tags=["rewrite"])
-app.include_router(history.router, prefix="/api/history", tags=["history"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(rewrite.router, prefix="/rewrite", tags=["rewrite"])
+app.include_router(history.router, prefix="/history", tags=["history"])
 
 
 @app.get("/health")
