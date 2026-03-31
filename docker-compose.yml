@@ -1,17 +1,18 @@
 version: "3.9"
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: rewrite_mysql
+  postgres:
+    image: postgres:16-alpine
+    container_name: rewrite_postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rewrite_pass
-      MYSQL_DATABASE: rewrite_app
+      POSTGRES_DB: rewrite_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: rewrite_pass
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  mysql_data:
+  postgres_data:

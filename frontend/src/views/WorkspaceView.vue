@@ -34,6 +34,25 @@
                 <span class="muted">{{ sourceText.trim().length }} 字</span>
               </div>
 
+              <div class="upload-toolbar">
+                <input
+                  ref="fileInput"
+                  class="file-input"
+                  type="file"
+                  accept=".txt,.md,.pdf,.docx"
+                  @change="handleFileChange"
+                />
+                <div>
+                  <strong>支持上传 .txt / .md / .pdf / .docx</strong>
+                  <div class="muted">
+                    {{ uploadedFileName ? `当前文件：${uploadedFileName}` : "上传后会自动提取正文到输入框。" }}
+                  </div>
+                </div>
+                <el-button size="large" :loading="uploading" @click="openFilePicker">
+                  {{ uploading ? "解析中..." : "上传文件" }}
+                </el-button>
+              </div>
+
               <div class="editor-box">
                 <textarea
                   v-model="sourceText"
@@ -111,8 +130,11 @@ const authStore = useAuthStore();
 const sourceText = ref("");
 const resultText = ref("");
 const loading = ref(false);
+const uploading = ref(false);
 const history = ref([]);
 const activeId = ref(null);
+const uploadedFileName = ref("");
+const fileInput = ref(null);
 
 async function loadHistory() {
   try {
@@ -146,10 +168,41 @@ async function handleRewrite() {
   }
 }
 
+function openFilePicker() {
+  fileInput.value?.click();
+}
+
+async function handleFileChange(event) {
+  const file = event.target.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  uploading.value = true;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const { data } = await http.post("/rewrite/extract-file", formData);
+    sourceText.value = data.source_text;
+    resultText.value = "";
+    activeId.value = null;
+    uploadedFileName.value = data.filename;
+    ElMessage.success(`已导入 ${data.filename}`);
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "文件解析失败"));
+  } finally {
+    uploading.value = false;
+    event.target.value = "";
+  }
+}
+
 function handleClear() {
   sourceText.value = "";
   resultText.value = "";
   activeId.value = null;
+  uploadedFileName.value = "";
 }
 
 async function handleCopy() {
@@ -170,6 +223,7 @@ function applyHistory(item) {
   activeId.value = item.id;
   sourceText.value = item.source_text;
   resultText.value = item.result_text;
+  uploadedFileName.value = "";
 }
 
 function handleLogout() {

@@ -11,13 +11,14 @@ class Settings(BaseSettings):
     secret_key: str = "change-me"
     access_token_expire_minutes: int = 60 * 24 * 7
     database_url: str = (
-        "mysql+pymysql://root:your_mysql_password@127.0.0.1:3306/rewrite_app"
+        "postgresql+psycopg://postgres:rewrite_pass@127.0.0.1:5432/rewrite_app"
     )
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-20250514"
     anthropic_base_url: str = "https://api.anthropic.com"
     anthropic_max_tokens: int = 4096
     anthropic_temperature: float = 0.4
+    max_upload_size_mb: int = 10
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",

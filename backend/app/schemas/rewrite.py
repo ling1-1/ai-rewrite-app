@@ -16,3 +16,8 @@ class RewriteResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class FileExtractResponse(BaseModel):
+    filename: str
+    source_text: str
+    char_count: int

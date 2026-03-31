@@ -247,6 +247,22 @@ textarea {
   font-size: 1.2rem;
 }
 
+.upload-toolbar {
+  margin-top: 18px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.file-input {
+  display: none;
+}
+
 .editor-box {
   margin-top: 18px;
   flex: 1;
@@ -330,7 +346,8 @@ textarea {
   .workspace-topbar,
   .editor-header,
   .history-header,
-  .editor-actions {
+  .editor-actions,
+  .upload-toolbar {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -339,4 +356,3 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
-
