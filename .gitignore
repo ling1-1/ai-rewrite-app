@@ -12,3 +12,4 @@ venv
 *.pyc
 backend/.venv
 backend/.mypy_cache
+.vercel
