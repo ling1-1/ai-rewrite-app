@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>文意重塑 AI 工作台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <nav class="topbar">
+          <div class="brand">
+            <div class="brand-mark">W</div>
+            <div>
+              <p class="brand-title">文意重塑工作台</p>
+              <p class="brand-subtitle">Academic Rewrite Studio</p>
+            </div>
+          </div>
+          <div class="top-actions">
+            <a href="#workspace" class="ghost-link">查看工作台</a>
+            <button class="primary-button">接入模型 API</button>
+          </div>
+        </nav>
+
+        <div class="hero-body">
+          <div class="hero-copy">
+            <span class="eyebrow">文本改写型 AI 网站首版原型</span>
+            <h1>将参考网站的商业布局，打造成更干净、更高级的产品首页</h1>
+            <p class="hero-text">
+              面向论文润色、内容改写和表达优化等场景。左侧输入原文，右侧输出重写结果。
+              后续只需将右侧的演示逻辑替换成大模型 API，即可作为 MVP 上线。
+            </p>
+            <div class="hero-metrics">
+              <div class="metric-card">
+                <strong>双栏工作区</strong>
+                <span>符合您的核心操作习惯</span>
+              </div>
+              <div class="metric-card">
+                <strong>参数面板</strong>
+                <span>改写强度、风格、输出策略一目了然</span>
+              </div>
+              <div class="metric-card">
+                <strong>直接对接 API</strong>
+                <span>后端只需接入大模型即可投入使用</span>
+              </div>
+            </div>
+          </div>
+
+          <aside class="hero-panel">
+            <div class="hero-panel-card">
+              <p class="panel-kicker">建议首页模块</p>
+              <ul class="panel-list">
+                <li>功能卡片导航</li>
+                <li>双栏编辑工作台</li>
+                <li>任务历史记录</li>
+                <li>信用点数 / 次数提示</li>
+              </ul>
+            </div>
+            <div class="hero-panel-card accent">
+              <p class="panel-kicker">设计关键词</p>
+              <p class="panel-highlight">轻科技、专业感、留白充足、像正式 SaaS。</p>
+            </div>
+          </aside>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-icon blue">01</span>
+            <div>
+              <h2>文本重写</h2>
+              <p>在不偏离原意的前提下，替换表达方式，优化句式和节奏。</p>
+            </div>
+          </article>
+          <article class="feature-card is-active">
+            <span class="feature-icon violet">02</span>
+            <div>
+              <h2>学术润色</h2>
+              <p>更适合论文、开题报告、课程作业等正式书面表达场景。</p>
+            </div>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon amber">03</span>
+            <div>
+              <h2>保留术语</h2>
+              <p>针对专业词汇和关键概念，尽量保留稳定表达，减少误改。</p>
+            </div>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon mint">04</span>
+            <div>
+              <h2>结果对照</h2>
+              <p>右侧可直接查看输出结果，后续可增加差异高亮和版本记录等功能。</p>
+            </div>
+          </article>
+        </section>
+
+        <section class="workspace" id="workspace">
+          <div class="workspace-header">
+            <div>
+              <p class="section-label">Rewrite Console</p>
+              <h2>文意重塑工作区</h2>
+            </div>
+            <div class="workspace-badge">首版视觉 Demo</div>
+          </div>
+
+          <div class="toolbar">
+            <div class="toolbar-group">
+              <span class="toolbar-label">语言</span>
+              <button class="chip is-selected">中文</button>
+              <button class="chip">英文</button>
+            </div>
+            <div class="toolbar-group">
+              <span class="toolbar-label">风格</span>
+              <button class="chip is-selected">学术正式</button>
+              <button class="chip">自然表达</button>
+              <button class="chip">简洁凝练</button>
+            </div>
+            <div class="toolbar-group">
+              <span class="toolbar-label">强度</span>
+              <button class="chip">轻度</button>
+              <button class="chip is-selected">中度</button>
+              <button class="chip">深度</button>
+            </div>
+          </div>
+
+          <div class="editor-grid">
+            <section class="editor-card">
+              <div class="editor-head">
+                <div>
+                  <p class="editor-kicker">输入区</p>
+                  <h3>原文内容</h3>
+                </div>
+                <span class="editor-count" id="sourceCount">0 字</span>
+              </div>
+              <textarea
+                id="sourceText"
+                class="editor-area"
+                placeholder="将需要改写的原文粘贴到此处。接入大模型后，系统会根据您选择的风格和强度输出重写结果。"
+              >近年来，人工智能技术在教育领域中的应用不断深入，不仅提高了教学资源的获取效率，也推动了个性化学习模式的发展。然而，在实际应用过程中，仍然需要平衡技术效率、教学目标与学生体验之间的关系。</textarea>
+              <div class="editor-footer">
+                <button class="secondary-button" id="clearButton">清空内容</button>
+                <button class="primary-button wide" id="rewriteButton">开始改写</button>
+              </div>
+            </section>
+
+            <section class="editor-card result-card">
+              <div class="editor-head">
+                <div>
+                  <p class="editor-kicker">输出区</p>
+                  <h3>改写结果</h3>
+                </div>
+                <span class="editor-status" id="statusText">等待处理</span>
+              </div>
+              <div class="result-area" id="resultText">
+                点击“开始改写”后，这里会展示模型的输出结果。当前页面仅用演示逻辑模拟改写效果，正式开发时只需将此处替换为后端 API 的返回内容。
+              </div>
+              <div class="editor-footer">
+                <button class="secondary-button" id="copyButton">复制结果</button>
+                <button class="outline-button">查看差异</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="bottom-grid">
+          <article class="history-card">
+            <div class="history-head">
+              <div>
+                <p class="section-label">Recent Tasks</p>
+                <h2>最近记录</h2>
+              </div>
+              <a href="#" class="ghost-link">查看全部</a>
+            </div>
+            <div class="history-list">
+              <div class="history-item">
+                <strong>论文摘要润色</strong>
+                <span>2 分钟前 · 学术正式 · 中度改写</span>
+              </div>
+              <div class="history-item">
+                <strong>课程作业重写</strong>
+                <span>今天 14:28 · 简洁凝练 · 深度改写</span>
+              </div>
+              <div class="history-item">
+                <strong>产品文案优化</strong>
+                <span>今天 09:16 · 自然表达 · 轻度改写</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="summary-card">
+            <p class="section-label">MVP Suggestion</p>
+            <h2>后端接入建议</h2>
+            <ul class="summary-list">
+              <li>前端调用 `/api/rewrite` 接口并传入原文和参数</li>
+              <li>服务端拼接 Prompt 参数后请求大模型接口</li>
+              <li>返回改写后的文本、消耗次数与任务记录</li>
+              <li>后续可扩展登录、支付、任务分享及会员体系</li>
+            </ul>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
