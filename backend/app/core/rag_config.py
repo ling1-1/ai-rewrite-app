@@ -6,7 +6,7 @@ RAG 配置管理
 - similarity_threshold: 相似度阈值（默认 0.7）
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class RAGConfig(BaseSettings):
@@ -21,8 +21,10 @@ class RAGConfig(BaseSettings):
     # 是否启用 RAG
     enabled: bool = True
     
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra='ignore'  # 忽略额外的环境变量
+    )
 
 
 # 全局配置实例
