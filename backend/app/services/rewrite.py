@@ -3,8 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.services.embedding import get_embedding, EmbeddingServiceError
-from app.services.rag import RagService
+from app.services.viking_rag_service import VikingRAGService
 
 
 class RewriteServiceError(Exception):
@@ -40,26 +39,23 @@ def rewrite_text(
     Returns:
         str: 改写后的文本
     """
-    # 1. RAG 检索（如果启用且有数据库）
+    # 1. RAG 检索（如果启用）
     prompt = source_text
-    if use_rag and db:
+    if use_rag:
         try:
-            # 1.1 生成查询向量
-            query_embedding = get_embedding(source_text)
+            # 初始化 RAG 服务
+            rag_service = VikingRAGService()
             
-            # 1.2 检索相似记录
-            rag_service = RagService(db)
-            similar_records = rag_service.find_similar_records(
-                query_embedding,
-                limit=settings.rag_top_k,
-                similarity_threshold=settings.rag_similarity_threshold
-            )
+            # 检索相似文档
+            similar_docs = rag_service.search(source_text, limit=5)
             
-            # 1.3 构建 RAG 提示词
-            if similar_records:
-                prompt = rag_service.build_rag_prompt(similar_records, source_text)
-        except EmbeddingServiceError:
-            # Embedding 失败，降级到基础提示词
+            # 构建 RAG 提示词
+            if similar_docs:
+                prompt = rag_service.build_rag_prompt(similar_docs, source_text)
+                
+        except Exception as e:
+            # RAG 失败，降级到基础提示词
+            print(f"⚠️  RAG 检索失败，使用基础提示词：{e}")
             pass
     
     # 2. 调用 Chat API
