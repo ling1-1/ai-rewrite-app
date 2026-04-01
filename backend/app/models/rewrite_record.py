@@ -6,14 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
-# pgvector 扩展
-try:
-    from pgvector.sqlalchemy import Vector
-    VECTOR_AVAILABLE = True
-except ImportError:
-    VECTOR_AVAILABLE = False
-    Vector = None
-
 # 检测数据库类型
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 IS_POSTGRES = "postgresql" in DATABASE_URL
@@ -37,14 +29,8 @@ class RewriteRecord(Base):
     source_text: Mapped[str] = mapped_column(Text, nullable=False)
     result_text: Mapped[str] = mapped_column(Text, nullable=False)
     
-    # 向量嵌入（用于 RAG 检索）- pgvector
-    embedding: Mapped[list] = mapped_column(
-        Vector(1536) if VECTOR_AVAILABLE else Text,
-        nullable=True,
-        index=VECTOR_AVAILABLE
-    )
-    
-    # 元数据（JSONB/JSON 存储额外信息）
+    # 元数据（JSON/JSONB 存储额外信息）
+    # 存储：用户名、使用模型、使用时间等
     metadata_: Mapped[dict] = mapped_column(
         MetadataType,
         default={},
@@ -52,8 +38,8 @@ class RewriteRecord(Base):
         name="metadata"
     )
     
-    # 相似度分数（用于记录检索时的相似度）
-    similarity_score: Mapped[float] = mapped_column(nullable=True)
+    # 大模型原始响应
+    response: Mapped[str] = mapped_column(Text, nullable=True)
     
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
