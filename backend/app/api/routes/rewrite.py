@@ -62,13 +62,13 @@ def create_rewrite(
             from app.services.viking_rag_service import VikingRAGService
             rag_service = VikingRAGService()
             
-            # 构建灵活的 metadata
-            metadata = {
-                "topic": "用户改写",
-                "user_id": str(current_user.id),
-                "source": "api",
-                "created_at": datetime.now().isoformat()
-            }
+            # 简化写入：只写入必要字段
+            # metadata 使用字符串数组（VikingDB 要求的格式）
+            metadata = [
+                "用户改写",
+                f"user_{current_user.id}",
+                "api"
+            ]
             
             rag_service.add_single(
                 original_text=payload.source_text,
