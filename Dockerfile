@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend
 COPY api/ ./api
 
+# 设置 PYTHONPATH
+ENV PYTHONPATH=/app:/app/backend
+
 # 暴露端口（HF 使用 7860）
 EXPOSE 7860
 
