@@ -17,3 +17,5 @@ node_modules/
 frontend/
 public/
 *.log
+
+# Force rebuild: 1775049742.9294028
