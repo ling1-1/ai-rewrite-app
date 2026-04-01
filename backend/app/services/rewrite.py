@@ -62,17 +62,26 @@ def rewrite_text(
             # Embedding 失败，降级到基础提示词
             pass
     
-    # 2. 调用 Claude API
+    # 2. 调用 Chat API
     if not settings.anthropic_api_key:
-        raise RewriteServiceError("尚未配置 Anthropic API Key，请先在 backend/.env 中填写。")
+        raise RewriteServiceError("尚未配置 API Key")
 
-    url = f"{settings.anthropic_base_url.rstrip('/')}/v1/messages"
+    # 构建正确的 URL（避免重复 /v1）
+    base_url = settings.anthropic_base_url.rstrip('/')
+    if base_url.endswith('/v3'):
+        url = f"{base_url}/chat/completions"
+    else:
+        url = f"{base_url}/v1/chat/completions"
+    
     payload = {
         "model": settings.anthropic_model,
         "max_tokens": settings.anthropic_max_tokens,
         "temperature": settings.anthropic_temperature,
-        "system": SYSTEM_PROMPT,
         "messages": [
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT,
+            },
             {
                 "role": "user",
                 "content": prompt,
@@ -80,8 +89,7 @@ def rewrite_text(
         ],
     }
     headers = {
-        "x-api-key": settings.anthropic_api_key,
-        "anthropic-version": "2023-06-01",
+        "Authorization": f"Bearer {settings.anthropic_api_key}",
         "content-type": "application/json",
     }
 
@@ -90,20 +98,32 @@ def rewrite_text(
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
         message = _extract_error_message(exc.response)
-        raise RewriteServiceError(f"Claude API 请求失败：{message}") from exc
+        raise RewriteServiceError(f"API 请求失败：{message}") from exc
     except httpx.HTTPError as exc:
-        raise RewriteServiceError("无法连接 Claude API，请检查网络或接口配置。") from exc
+        raise RewriteServiceError("无法连接 API，请检查网络或接口配置。") from exc
 
+    # 调试：打印原始响应
+    import json
+    print(f"📊 API 原始响应：{json.dumps(response.json(), indent=2, ensure_ascii=False)[:500]}")
+    
     data = response.json()
-    content = data.get("content", [])
-    result = "\n".join(
-        item.get("text", "").strip()
-        for item in content
-        if item.get("type") == "text" and item.get("text")
-    ).strip()
+    
+    # DeepSeek 格式响应
+    if "choices" in data and len(data["choices"]) > 0:
+        result = data["choices"][0]["message"]["content"].strip()
+    # Anthropic/Claude 格式响应
+    elif "content" in data:
+        content = data.get("content", [])
+        result = "\n".join(
+            item.get("text", "").strip()
+            for item in content
+            if item.get("type") == "text" and item.get("text")
+        ).strip()
+    else:
+        result = ""
 
     if not result:
-        raise RewriteServiceError("Claude API 已返回响应，但没有解析到可用文本。")
+        raise RewriteServiceError("API 已返回响应，但没有解析到可用文本。")
 
     return result
 

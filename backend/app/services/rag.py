@@ -54,24 +54,24 @@ class RagService:
         threshold: float
     ) -> List[RewriteRecord]:
         """PostgreSQL + pgvector 向量检索"""
-        query = text("""
+        from sqlalchemy import text
+        
+        # 将向量转换为字符串格式 '[val1,val2,...]'
+        vector_str = '[' + ','.join(str(x) for x in embedding) + ']'
+        
+        # 使用原始 SQL，避免参数化问题
+        sql = f"""
             SELECT 
                 id, user_id, source_text, result_text, 
-                1 - (embedding <=> :vec) as similarity_score
+                1 - (embedding <=> '{vector_str}'::vector) as similarity_score
             FROM rewrite_records
             WHERE embedding IS NOT NULL
-              AND 1 - (embedding <=> :vec) > :threshold
-            ORDER BY embedding <=> :vec
-            LIMIT :limit
-        """)
+              AND 1 - (embedding <=> '{vector_str}'::vector) > {threshold}
+            ORDER BY embedding <=> '{vector_str}'::vector
+            LIMIT {limit}
+        """
         
-        params = {
-            "vec": embedding,
-            "limit": limit,
-            "threshold": 1 - threshold  # pgvector 使用距离，1-similarity
-        }
-        
-        result = self.db.execute(query, params).fetchall()
+        result = self.db.execute(text(sql)).fetchall()
         
         records = []
         for row in result:
