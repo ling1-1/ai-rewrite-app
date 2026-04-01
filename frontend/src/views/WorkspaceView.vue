@@ -119,7 +119,6 @@
 </template>
 
 <script setup>
-import HistoryEditDialog from '../components/HistoryEditDialog.vue'
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
@@ -243,4 +242,3 @@ function formatDate(value) {
 
 onMounted(loadHistory);
 </script>
-
