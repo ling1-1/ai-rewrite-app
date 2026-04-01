@@ -11,6 +11,7 @@ from app.schemas.rewrite import FileExtractResponse, RewriteRequest, RewriteResp
 from app.services.file_extract import FileExtractError, extract_text_from_upload
 from app.services.rewrite import RewriteServiceError, rewrite_text
 from app.services.viking_rag_service import VikingRAGService
+from app.core.config import settings
 
 router = APIRouter()
 
