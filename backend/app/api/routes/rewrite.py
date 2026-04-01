@@ -21,8 +21,7 @@ def create_rewrite(
     payload: RewriteRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    use_rag: bool = True,  # 是否使用 RAG 增强
-    save_to_viking: bool = True  # 是否保存到 VikingDB
+    use_rag: bool = True  # 是否使用 RAG 增强
 ):
     """
     改写文本（支持 RAG 增强）
@@ -32,7 +31,6 @@ def create_rewrite(
         db: 数据库会话
         current_user: 当前用户
         use_rag: 是否使用 RAG 增强（默认 True）
-        save_to_viking: 是否保存到 VikingDB（默认 True）
     """
     if not payload.source_text.strip():
         raise HTTPException(status_code=400, detail="原文不能为空")
@@ -57,39 +55,8 @@ def create_rewrite(
     db.commit()
     db.refresh(record)
 
-    # 自动写入 VikingDB（用于 RAG 检索）
-    if save_to_viking:
-        try:
-            from app.services.viking_rag_service import VikingRAGService
-            rag_service = VikingRAGService()
-            
-            # metadata 使用字符串数组（VikingDB 要求的格式）
-            # 存储：用户名、使用模型、使用时间
-            username = getattr(current_user, 'username', f'user_{current_user.id}')
-            metadata = [
-                username,
-                settings.anthropic_model,
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            ]
-            
-            print(f"📝 准备写入 VikingDB:")
-            print(f"  original_text: {payload.source_text[:50]}...")
-            print(f"  rewrite_text: {result_text[:50]}...")
-            print(f"  metadata: {metadata}")
-            
-            success = rag_service.add_single(
-                original_text=payload.source_text,
-                rewrite_text=result_text,
-                metadata=metadata
-            )
-            
-            if success:
-                print(f"✅ 成功写入 VikingDB")
-            else:
-                print(f"⚠️ VikingDB 写入返回失败")
-        except Exception as e:
-            print(f"⚠️ 写入 VikingDB 异常：{e}")
-            # 不阻断主流程，继续返回结果
+    # ⚠️ 不再自动写入 VikingDB - 由用户手动选择
+    # VikingDB 只存储明确成功的降重案例
 
     return record
 
@@ -154,6 +121,67 @@ def sync_to_viking(
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"同步失败：{str(e)}")
+
+
+@router.post("/{record_id}/sync-to-viking")
+def sync_record_to_viking(
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    手动将历史记录写入 VikingDB（用于 RAG 检索）
+    
+    只有明确成功的降重案例才写入向量数据库
+    """
+    # 查询记录
+    record = db.query(RewriteRecord).filter(
+        RewriteRecord.id == record_id,
+        RewriteRecord.user_id == current_user.id
+    ).first()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    
+    try:
+        from app.services.viking_rag_service import VikingRAGService
+        rag_service = VikingRAGService()
+        
+        # metadata 使用字符串数组（VikingDB 要求的格式）
+        # 存储：用户名、使用模型、使用时间
+        username = getattr(current_user, 'username', f'user_{current_user.id}')
+        metadata = [
+            username,
+            settings.anthropic_model,
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ]
+        
+        print(f"📝 手动写入 VikingDB:")
+        print(f"  record_id: {record_id}")
+        print(f"  original_text: {record.source_text[:50]}...")
+        print(f"  rewrite_text: {record.result_text[:50]}...")
+        print(f"  metadata: {metadata}")
+        
+        success = rag_service.add_single(
+            original_text=record.source_text,
+            rewrite_text=record.result_text,
+            metadata=metadata
+        )
+        
+        if success:
+            print(f"✅ 成功写入 VikingDB")
+            return {
+                "success": True,
+                "message": "已成功写入向量数据库",
+                "record_id": record_id
+            }
+        else:
+            print(f"⚠️ VikingDB 写入返回失败")
+            raise HTTPException(status_code=500, detail="VikingDB 写入失败")
+            
+    except Exception as e:
+        print(f"❌ 写入 VikingDB 异常：{e}")
+        raise HTTPException(status_code=500, detail=f"写入失败：{str(e)}")
 
 
 @router.post("/extract-file", response_model=FileExtractResponse)
