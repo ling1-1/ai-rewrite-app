@@ -37,7 +37,8 @@ app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(rewrite.router, prefix="/rewrite", tags=["rewrite"])
 app.include_router(history.router, prefix="/history", tags=["history"])
 app.include_router(config.router, prefix="/config", tags=["config"])
-app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(admin.router, prefix="/admin/config", tags=["admin-config"])
+app.include_router(admin_manage.router, prefix="/admin", tags=["admin-manage"])
 
 
 @app.get("/health")
