@@ -1,6 +1,10 @@
 import httpx
+from typing import Optional
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.services.embedding import get_embedding, EmbeddingServiceError
+from app.services.rag import RagService
 
 
 class RewriteServiceError(Exception):
@@ -8,7 +12,7 @@ class RewriteServiceError(Exception):
 
 
 SYSTEM_PROMPT = """
-你是“JS 论文工作室”的论文改写助手。
+你是"JS 论文工作室"的论文改写助手。
 
 你的任务是将用户输入的中文论文内容进行学术化改写和表达优化，但必须遵守以下规则：
 1. 保持原意、事实、结论和逻辑结构不变。
@@ -20,7 +24,45 @@ SYSTEM_PROMPT = """
 """.strip()
 
 
-def rewrite_text(source_text: str) -> str:
+def rewrite_text(
+    source_text: str,
+    db: Optional[Session] = None,
+    use_rag: bool = True
+) -> str:
+    """
+    改写文本（支持 RAG 增强）
+    
+    Args:
+        source_text: 原文
+        db: 数据库会话（用于 RAG 检索）
+        use_rag: 是否启用 RAG 增强
+        
+    Returns:
+        str: 改写后的文本
+    """
+    # 1. RAG 检索（如果启用且有数据库）
+    prompt = source_text
+    if use_rag and db:
+        try:
+            # 1.1 生成查询向量
+            query_embedding = get_embedding(source_text)
+            
+            # 1.2 检索相似记录
+            rag_service = RagService(db)
+            similar_records = rag_service.find_similar_records(
+                query_embedding,
+                limit=settings.rag_top_k,
+                similarity_threshold=settings.rag_similarity_threshold
+            )
+            
+            # 1.3 构建 RAG 提示词
+            if similar_records:
+                prompt = rag_service.build_rag_prompt(similar_records, source_text)
+        except EmbeddingServiceError:
+            # Embedding 失败，降级到基础提示词
+            pass
+    
+    # 2. 调用 Claude API
     if not settings.anthropic_api_key:
         raise RewriteServiceError("尚未配置 Anthropic API Key，请先在 backend/.env 中填写。")
 
@@ -33,7 +75,7 @@ def rewrite_text(source_text: str) -> str:
         "messages": [
             {
                 "role": "user",
-                "content": f"请改写下面这段论文内容：\n\n{source_text.strip()}",
+                "content": prompt,
             }
         ],
     }
