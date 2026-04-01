@@ -1,0 +1,10 @@
+{
+  "name": "rewrite-app",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm --prefix frontend run build -- --outDir ../public --emptyOutDir"
+  }
+}
