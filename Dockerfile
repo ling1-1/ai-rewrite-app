@@ -23,3 +23,5 @@ EXPOSE 7860
 
 # 启动命令
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+
+# Rebuild trigger: 1775048478
