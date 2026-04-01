@@ -12,13 +12,12 @@ router = APIRouter()
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
-    existing_user = db.scalar(select(User).where(User.email == payload.email))
+    existing_user = db.scalar(select(User).where(User.username == payload.username))
     if existing_user:
-        raise HTTPException(status_code=400, detail="该邮箱已注册")
+        raise HTTPException(status_code=400, detail="该用户名已注册")
 
     user = User(
         username=payload.username,
-        email=payload.email,
         password_hash=hash_password(payload.password),
     )
     db.add(user)
@@ -30,9 +29,9 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.scalar(select(User).where(User.email == payload.email))
+    user = db.scalar(select(User).where(User.username == payload.username))
     if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=400, detail="邮箱或密码错误")
+        raise HTTPException(status_code=400, detail="用户名或密码错误")
 
     access_token = create_access_token(str(user.id))
     return {"access_token": access_token, "user": user}
