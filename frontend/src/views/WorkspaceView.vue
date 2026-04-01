@@ -106,7 +106,10 @@
               :class="{ 'is-active': activeId === item.id }"
               @click="applyHistory(item)"
             >
-              <strong>{{ formatDate(item.created_at) }}</strong>
+              <div class="history-header">
+                <strong>{{ formatDate(item.created_at) }}</strong>
+                <el-button size="small" @click.stop="editHistory(item)">编辑</el-button>
+              </div>
               <div class="history-text">{{ item.source_text }}</div>
               <div class="history-meta">点击可回填原文与结果</div>
             </div>
