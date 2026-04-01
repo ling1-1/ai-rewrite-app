@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
@@ -19,7 +20,8 @@ def create_rewrite(
     payload: RewriteRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    use_rag: bool = True  # 是否使用 RAG 增强
+    use_rag: bool = True,  # 是否使用 RAG 增强
+    save_to_viking: bool = True  # 是否保存到 VikingDB
 ):
     """
     改写文本（支持 RAG 增强）
@@ -29,6 +31,7 @@ def create_rewrite(
         db: 数据库会话
         current_user: 当前用户
         use_rag: 是否使用 RAG 增强（默认 True）
+        save_to_viking: 是否保存到 VikingDB（默认 True）
     """
     if not payload.source_text.strip():
         raise HTTPException(status_code=400, detail="原文不能为空")
@@ -43,6 +46,7 @@ def create_rewrite(
     except RewriteServiceError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
+    # 保存到本地数据库
     record = RewriteRecord(
         user_id=current_user.id,
         source_text=payload.source_text,
@@ -51,6 +55,30 @@ def create_rewrite(
     db.add(record)
     db.commit()
     db.refresh(record)
+
+    # 自动写入 VikingDB（用于 RAG 检索）
+    if save_to_viking:
+        try:
+            from app.services.viking_rag_service import VikingRAGService
+            rag_service = VikingRAGService()
+            
+            # 构建灵活的 metadata
+            metadata = {
+                "topic": "用户改写",
+                "user_id": str(current_user.id),
+                "source": "api",
+                "created_at": datetime.now().isoformat()
+            }
+            
+            rag_service.add_single(
+                original_text=payload.source_text,
+                rewrite_text=result_text,
+                metadata=metadata
+            )
+            print(f"✅ 成功写入 VikingDB")
+        except Exception as e:
+            print(f"⚠️ 写入 VikingDB 失败：{e}")
+            # 不阻断主流程
 
     return record
 
