@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class RegisterRequest(BaseModel):
@@ -14,7 +14,7 @@ class LoginRequest(BaseModel):
 class UserResponse(BaseModel):
     id: int
     username: str
-    email: EmailStr
+    is_admin: bool = False
 
     class Config:
         from_attributes = True
