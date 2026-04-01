@@ -29,8 +29,16 @@ class RewriteRecord(Base):
     source_text: Mapped[str] = mapped_column(Text, nullable=False)
     result_text: Mapped[str] = mapped_column(Text, nullable=False)
     
+    # 自定义名称（用户可编辑）
+    name: Mapped[str] = mapped_column(Text, nullable=True)
+    
+    # 是否收藏
+    is_favorite: Mapped[bool] = mapped_column(default=False, nullable=False)
+    
+    # 备注
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+    
     # 元数据（JSON/JSONB 存储额外信息）
-    # 存储：用户名、使用模型、使用时间等
     metadata_: Mapped[dict] = mapped_column(
         MetadataType,
         default={},
