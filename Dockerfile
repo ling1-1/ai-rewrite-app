@@ -13,15 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制项目代码
 COPY backend/ ./backend
-COPY api/ ./api
 
 # 设置 PYTHONPATH
-ENV PYTHONPATH=/app:/app/backend
+ENV PYTHONPATH=/app/backend
 
 # 暴露端口（HF 使用 7860）
 EXPOSE 7860
 
 # 启动命令
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "7860"]
-
-# Rebuild trigger: 1775048478
