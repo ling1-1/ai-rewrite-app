@@ -48,11 +48,11 @@
         <div>
           <p class="section-kicker">Login</p>
           <h2>欢迎回来</h2>
-          <p>输入你的邮箱和密码，进入 JS 论文工作室。</p>
+          <p>输入你的用户名和密码，进入 JS 论文工作室。</p>
         </div>
 
         <el-form class="auth-form" :model="form" @submit.prevent="handleLogin">
-          <el-input v-model="form.email" size="large" placeholder="邮箱" />
+          <el-input v-model="form.username" size="large" placeholder="用户名" />
           <el-input
             v-model="form.password"
             size="large"
@@ -84,13 +84,13 @@ const router = useRouter();
 const authStore = useAuthStore();
 const loading = ref(false);
 const form = reactive({
-  email: "",
+  username: "",
   password: ""
 });
 
 async function handleLogin() {
-  if (!form.email || !form.password) {
-    ElMessage.warning("请先填写邮箱和密码");
+  if (!form.username || !form.password) {
+    ElMessage.warning("请先填写用户名和密码");
     return;
   }
 
