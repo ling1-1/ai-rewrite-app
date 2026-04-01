@@ -8,7 +8,9 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
 from app.api.deps import get_db
+from app.api.deps_admin import get_current_admin_user
 from app.services.config_service import ConfigService
+from app.models.user import User
 
 router = APIRouter()
 
@@ -53,9 +55,12 @@ class FeatureFlagsResponse(BaseModel):
     enable_registration: bool
 
 
-@router.get("", summary="获取所有配置")
-def get_all_configs(db: Session = Depends(get_db)):
-    """获取所有配置"""
+@router.get("", summary="获取所有配置", tags=["admin"])
+def get_all_configs(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """获取所有配置（需要管理员权限）"""
     config_service = ConfigService(db)
     configs = config_service.get_all()
     return configs
@@ -82,16 +87,23 @@ def update_config(key: str, request: ConfigUpdateRequest, db: Session = Depends(
     return {"key": key, "value": request.value, "description": request.description}
 
 
-@router.get("/rag/config", response_model=RAGConfigResponse, summary="获取 RAG 配置")
-def get_rag_config(db: Session = Depends(get_db)):
-    """获取 RAG 检索配置"""
+@router.get("/rag/config", response_model=RAGConfigResponse, summary="获取 RAG 配置", tags=["admin"])
+def get_rag_config(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """获取 RAG 检索配置（需要管理员权限）"""
     config_service = ConfigService(db)
     return config_service.get_rag_config()
 
 
-@router.put("/rag/config", response_model=RAGConfigResponse, summary="更新 RAG 配置")
-def update_rag_config(request: RAGConfigUpdateRequest, db: Session = Depends(get_db)):
-    """更新 RAG 检索配置"""
+@router.put("/rag/config", response_model=RAGConfigResponse, summary="更新 RAG 配置", tags=["admin"])
+def update_rag_config(
+    request: RAGConfigUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """更新 RAG 检索配置（需要管理员权限）"""
     config_service = ConfigService(db)
     
     if request.top_k is not None:
@@ -107,33 +119,47 @@ def update_rag_config(request: RAGConfigUpdateRequest, db: Session = Depends(get
     return config_service.get_rag_config()
 
 
-@router.get("/prompt/system", response_model=SystemPromptResponse, summary="获取系统提示词")
-def get_system_prompt(db: Session = Depends(get_db)):
-    """获取系统提示词"""
+@router.get("/prompt/system", response_model=SystemPromptResponse, summary="获取系统提示词", tags=["admin"])
+def get_system_prompt(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """获取系统提示词（需要管理员权限）"""
     config_service = ConfigService(db)
     return {"prompt": config_service.get_system_prompt()}
 
 
-@router.put("/prompt/system", response_model=SystemPromptResponse, summary="更新系统提示词")
-def update_system_prompt(request: SystemPromptUpdateRequest, db: Session = Depends(get_db)):
-    """更新系统提示词"""
+@router.put("/prompt/system", response_model=SystemPromptResponse, summary="更新系统提示词", tags=["admin"])
+def update_system_prompt(
+    request: SystemPromptUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """更新系统提示词（需要管理员权限）"""
     config_service = ConfigService(db)
     config_service.set('system_prompt', request.prompt)
     return {"prompt": request.prompt}
 
 
-@router.get("/flags", response_model=FeatureFlagsResponse, summary="获取功能开关")
-def get_feature_flags(db: Session = Depends(get_db)):
-    """获取功能开关状态"""
+@router.get("/flags", response_model=FeatureFlagsResponse, summary="获取功能开关", tags=["admin"])
+def get_feature_flags(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """获取功能开关状态（需要管理员权限）"""
     config_service = ConfigService(db)
     return {
         "enable_registration": config_service.is_registration_enabled()
     }
 
 
-@router.put("/flags/registration", response_model=FeatureFlagsResponse, summary="更新注册开关")
-def update_registration_flag(enable: bool, db: Session = Depends(get_db)):
-    """更新注册功能开关"""
+@router.put("/flags/registration", response_model=FeatureFlagsResponse, summary="更新注册开关", tags=["admin"])
+def update_registration_flag(
+    enable: bool,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """更新注册功能开关（需要管理员权限）"""
     config_service = ConfigService(db)
     config_service.set('enable_registration', str(enable).lower())
     return {"enable_registration": enable}
