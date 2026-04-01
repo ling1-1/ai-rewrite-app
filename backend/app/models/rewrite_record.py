@@ -1,7 +1,7 @@
 from datetime import datetime
+import os
 
 from sqlalchemy import DateTime, ForeignKey, Text, func
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -13,6 +13,18 @@ try:
 except ImportError:
     VECTOR_AVAILABLE = False
     Vector = None
+
+# 检测数据库类型
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+IS_POSTGRES = "postgresql" in DATABASE_URL
+
+# PostgreSQL 用 JSONB，SQLite 用 JSON
+if IS_POSTGRES:
+    from sqlalchemy.dialects.postgresql import JSONB
+    MetadataType = JSONB
+else:
+    from sqlalchemy import JSON
+    MetadataType = JSON
 
 
 class RewriteRecord(Base):
@@ -32,9 +44,9 @@ class RewriteRecord(Base):
         index=VECTOR_AVAILABLE
     )
     
-    # 元数据（JSONB 存储额外信息）
+    # 元数据（JSONB/JSON 存储额外信息）
     metadata_: Mapped[dict] = mapped_column(
-        JSONB,
+        MetadataType,
         default={},
         nullable=True,
         name="metadata"
