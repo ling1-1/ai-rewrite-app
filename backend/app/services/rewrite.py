@@ -44,18 +44,41 @@ def rewrite_text(
     if use_rag:
         try:
             # 初始化 RAG 服务
+            from app.core.rag_config import get_rag_config
             rag_service = VikingRAGService()
+            config = get_rag_config()
+            
+            print(f"\n{'='*60}")
+            print(f"🔍 RAG 检索启动")
+            print(f"  查询：{source_text[:50]}...")
+            print(f"  top_k: {config.top_k}")
+            print(f"  相似度阈值：{config.similarity_threshold}")
+            print(f"{'='*60}\n")
             
             # 检索相似文档
-            similar_docs = rag_service.search(source_text, limit=5)
+            similar_docs = rag_service.search(source_text, limit=config.top_k)
+            
+            print(f"📚 检索到 {len(similar_docs)} 条相似记录:\n")
+            for i, doc in enumerate(similar_docs, 1):
+                print(f"[{i}] 相似度：{doc.get('score', 0):.4f}")
+                print(f"    原文：{doc.get('original_text', '')[:80]}...")
+                print(f"    改写：{doc.get('rewrite_text', '')[:80]}...")
+                print()
             
             # 构建 RAG 提示词
             if similar_docs:
                 prompt = rag_service.build_rag_prompt(similar_docs, source_text)
                 
+                print(f"📝 构建的完整提示词:\n{'-'*60}")
+                print(prompt)
+                print(f"{'-'*60}\n")
+            else:
+                print(f"⚠️  未检索到相似记录，使用基础提示词\n")
+                
         except Exception as e:
-            # RAG 失败，降级到基础提示词
-            print(f"⚠️  RAG 检索失败，使用基础提示词：{e}")
+            print(f"⚠️  RAG 检索失败，使用基础提示词：{e}\n")
+            import traceback
+            traceback.print_exc()
             pass
     
     # 2. 调用 Chat API
