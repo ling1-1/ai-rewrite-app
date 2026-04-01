@@ -45,8 +45,8 @@ def list_history(
     
     # 排序（收藏优先，然后按时间）
     query = query.order_by(
-        desc(RewriteRecord.is_favorite),
-        desc(RewriteRecord.created_at)
+        RewriteRecord.is_favorite.desc(),
+        RewriteRecord.created_at.desc()
     )
     
     # 分页
