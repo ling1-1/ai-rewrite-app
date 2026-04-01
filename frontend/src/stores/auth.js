@@ -4,7 +4,10 @@ import http from "../api/http";
 export const useAuthStore = defineStore("auth", {
   state: () => ({
     token: localStorage.getItem("rewrite_token") || "",
-    user: JSON.parse(localStorage.getItem("rewrite_user") || "null")
+    user: JSON.parse(localStorage.getItem("rewrite_user") || "null"),
+    get isAdmin() {
+      return this.user?.is_admin === true;
+    }
   }),
   actions: {
     async login(payload) {

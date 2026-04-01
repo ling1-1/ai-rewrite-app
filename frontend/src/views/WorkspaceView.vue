@@ -12,6 +12,7 @@
 
         <div class="right">
           <span class="pill">{{ authStore.user?.username || "未命名用户" }}</span>
+          <el-button v-if="authStore.user?.is_admin" round @click="goToSettings">⚙️ 设置</el-button>
           <el-button round @click="handleLogout">退出登录</el-button>
         </div>
       </header>
@@ -135,6 +136,10 @@ const history = ref([]);
 const activeId = ref(null);
 const uploadedFileName = ref("");
 const fileInput = ref(null);
+
+function goToSettings() {
+  router.push('/settings');
+}
 
 async function loadHistory() {
   try {

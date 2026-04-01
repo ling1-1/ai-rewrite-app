@@ -3,14 +3,14 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.services.viking_rag_service import VikingRAGService
 
 
 class RewriteServiceError(Exception):
     pass
 
 
-SYSTEM_PROMPT = """
+# 默认系统提示词（如果数据库中没有配置）
+DEFAULT_SYSTEM_PROMPT = """
 你是"JS 论文工作室"的论文改写助手。
 
 你的任务是将用户输入的中文论文内容进行学术化改写和表达优化，但必须遵守以下规则：
@@ -33,32 +33,71 @@ def rewrite_text(
     
     Args:
         source_text: 原文
-        db: 数据库会话（用于 RAG 检索）
+        db: 数据库会话（用于获取配置）
         use_rag: 是否启用 RAG 增强
         
     Returns:
         str: 改写后的文本
     """
-    # 1. RAG 检索（如果启用）
+    # 1. 获取系统提示词（从数据库配置）
+    system_prompt = DEFAULT_SYSTEM_PROMPT
+    if db:
+        try:
+            from app.services.config_service import ConfigService
+            config_service = ConfigService(db)
+            system_prompt = config_service.get_system_prompt() or DEFAULT_SYSTEM_PROMPT
+        except Exception as e:
+            print(f"⚠️  获取系统提示词失败：{e}")
+    
+    # 2. RAG 检索（如果启用）
     prompt = source_text
     if use_rag:
         try:
-            # 初始化 RAG 服务
-            rag_service = VikingRAGService()
+            # 获取 RAG 配置
+            from app.services.config_service import ConfigService
+            from app.services.vector_db_backend import get_vector_db
             
-            # 检索相似文档
-            similar_docs = rag_service.search(source_text, limit=5)
+            config_service = ConfigService(db) if db else None
+            rag_config = config_service.get_rag_config() if config_service else {'top_k': 3, 'similarity_threshold': 0.7}
+            
+            print(f"\n{'='*60}")
+            print(f"🔍 RAG 检索启动")
+            print(f"  查询：{source_text[:50]}...")
+            print(f"  top_k: {rag_config['top_k']}")
+            print(f"  相似度阈值：{rag_config['similarity_threshold']}")
+            print(f"{'='*60}\n")
+            
+            # 使用向量数据库抽象层检索
+            vector_db = get_vector_db()
+            similar_docs = vector_db.search(source_text, limit=rag_config['top_k'])
+            
+            print(f"📚 检索到 {len(similar_docs)} 条相似记录:\n")
+            for i, doc in enumerate(similar_docs, 1):
+                print(f"[{i}] 相似度：{doc.get('score', 0):.4f}")
+                print(f"    原文：{doc.get('original_text', '')[:80]}...")
+                print(f"    改写：{doc.get('rewrite_text', '')[:80]}...")
+                print()
             
             # 构建 RAG 提示词
             if similar_docs:
+                # 使用 VikingRAGService 的提示词构建（兼容抽象层）
+                from app.services.viking_rag_service import VikingRAGService
+                rag_service = VikingRAGService()
                 prompt = rag_service.build_rag_prompt(similar_docs, source_text)
                 
+                print(f"📝 构建的完整提示词:\n{'-'*60}")
+                print(prompt)
+                print(f"{'-'*60}\n")
+            else:
+                print(f"⚠️  未检索到相似记录，使用基础提示词\n")
+                
         except Exception as e:
-            # RAG 失败，降级到基础提示词
-            print(f"⚠️  RAG 检索失败，使用基础提示词：{e}")
+            print(f"⚠️  RAG 检索失败，使用基础提示词：{e}\n")
+            import traceback
+            traceback.print_exc()
             pass
     
-    # 2. 调用 Chat API
+    # 3. 调用 Chat API
     if not settings.anthropic_api_key:
         raise RewriteServiceError("尚未配置 API Key")
 
@@ -76,7 +115,7 @@ def rewrite_text(
         "messages": [
             {
                 "role": "system",
-                "content": SYSTEM_PROMPT,
+                "content": system_prompt,
             },
             {
                 "role": "user",
