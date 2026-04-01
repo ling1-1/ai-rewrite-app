@@ -62,12 +62,12 @@ def create_rewrite(
             from app.services.viking_rag_service import VikingRAGService
             rag_service = VikingRAGService()
             
-            # 简化写入：只写入必要字段
             # metadata 使用字符串数组（VikingDB 要求的格式）
+            # 存储：用户名、使用模型、使用时间
             metadata = [
-                "用户改写",
-                f"user_{current_user.id}",
-                "api"
+                f"user_{current_user.username}" if hasattr(current_user, 'username') else f"user_{current_user.id}",
+                settings.anthropic_model,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             ]
             
             rag_service.add_single(
