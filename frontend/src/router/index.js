@@ -22,9 +22,13 @@ router.beforeEach((to) => {
     return { name: "login" };
   }
 
-  if (to.meta.requiresAdmin && (!authStore.user || !authStore.user.is_admin)) {
-    alert('权限不足：需要管理员权限');
-    return { name: "workspace" };
+  if (to.meta.requiresAdmin) {
+    // 检查是否是管理员
+    const isAdmin = authStore.user?.is_admin === true || authStore.isAdmin === true;
+    if (!isAdmin) {
+      alert('权限不足：需要管理员权限');
+      return { name: "workspace" };
+    }
   }
 
   if ((to.name === "login" || to.name === "register") && authStore.token) {
