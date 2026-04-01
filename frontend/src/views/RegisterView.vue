@@ -39,7 +39,6 @@
 
         <el-form class="auth-form" :model="form" @submit.prevent="handleRegister">
           <el-input v-model="form.username" size="large" placeholder="用户名" />
-          <el-input v-model="form.email" size="large" placeholder="邮箱" />
           <el-input
             v-model="form.password"
             size="large"
@@ -72,13 +71,12 @@ const authStore = useAuthStore();
 const loading = ref(false);
 const form = reactive({
   username: "",
-  email: "",
   password: ""
 });
 
 async function handleRegister() {
-  if (!form.username || !form.email || !form.password) {
-    ElMessage.warning("请把注册信息填写完整");
+  if (!form.username || !form.password) {
+    ElMessage.warning("请先填写用户名和密码");
     return;
   }
 
