@@ -12,7 +12,8 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from app.api.deps import get_db, get_current_admin_user
+from app.api.deps import get_db
+from app.api.deps_admin import get_current_admin_user
 from app.models.user import User
 from app.models.rewrite_record import RewriteRecord
 from app.schemas.auth import RegisterRequest
