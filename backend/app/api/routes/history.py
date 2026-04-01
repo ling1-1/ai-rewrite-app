@@ -43,7 +43,7 @@ def list_history(
             (RewriteRecord.result_text.ilike(f"%{search}%"))
         )
     
-    # 排序（收藏优先，然后按时间）
+    # 排序（收藏优先，然后按时间） [FIXED]
     query = query.order_by(
         RewriteRecord.is_favorite.desc(),
         RewriteRecord.created_at.desc()
