@@ -64,21 +64,31 @@ def create_rewrite(
             
             # metadata 使用字符串数组（VikingDB 要求的格式）
             # 存储：用户名、使用模型、使用时间
+            username = getattr(current_user, 'username', f'user_{current_user.id}')
             metadata = [
-                f"user_{current_user.username}" if hasattr(current_user, 'username') else f"user_{current_user.id}",
+                username,
                 settings.anthropic_model,
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             ]
             
-            rag_service.add_single(
+            print(f"📝 准备写入 VikingDB:")
+            print(f"  original_text: {payload.source_text[:50]}...")
+            print(f"  rewrite_text: {result_text[:50]}...")
+            print(f"  metadata: {metadata}")
+            
+            success = rag_service.add_single(
                 original_text=payload.source_text,
                 rewrite_text=result_text,
                 metadata=metadata
             )
-            print(f"✅ 成功写入 VikingDB")
+            
+            if success:
+                print(f"✅ 成功写入 VikingDB")
+            else:
+                print(f"⚠️ VikingDB 写入返回失败")
         except Exception as e:
-            print(f"⚠️ 写入 VikingDB 失败：{e}")
-            # 不阻断主流程
+            print(f"⚠️ 写入 VikingDB 异常：{e}")
+            # 不阻断主流程，继续返回结果
 
     return record
 
