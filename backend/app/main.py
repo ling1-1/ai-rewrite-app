@@ -20,8 +20,8 @@ def initialize_database() -> None:
 
 initialize_database()
 
-# 初始化向量数据库
-init_vector_db()
+# 初始化向量数据库（延迟加载）
+# init_vector_db()
 
 app = FastAPI(title=settings.app_name)
 
