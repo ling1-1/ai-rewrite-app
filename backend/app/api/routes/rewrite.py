@@ -90,10 +90,20 @@ def create_rewrite(
     try:
         if use_rag:
             # 使用 RAG 增强改写
-            result_text = rewrite_text(payload.source_text, db=db, use_rag=True)
+            result_text = rewrite_text(
+                payload.source_text,
+                db=db,
+                use_rag=True,
+                rewrite_mode=payload.rewrite_mode,
+            )
         else:
             # 普通改写（不使用 RAG）
-            result_text = rewrite_text(payload.source_text, db=db, use_rag=False)
+            result_text = rewrite_text(
+                payload.source_text,
+                db=db,
+                use_rag=False,
+                rewrite_mode=payload.rewrite_mode,
+            )
     except RewriteServiceError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -149,7 +159,7 @@ def sync_to_vector_db(
         
         documents = [_build_vector_doc(record, current_user.username) for record in records]
         
-        vector_db = get_vector_db()
+        vector_db = get_vector_db(db=db)
         synced_count = _sync_documents_to_vector_db(vector_db, documents)
 
         if synced_count:
@@ -210,7 +220,7 @@ def sync_record_to_vector_db(
         print(f"  rewrite_text: {record.result_text[:50]}...")
         print(f"  favorite: {record.is_favorite}")
 
-        vector_db = get_vector_db()
+        vector_db = get_vector_db(db=db)
         success = vector_db.add(
             record.source_text,
             record.result_text,

@@ -17,6 +17,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 import os
+from sqlalchemy.orm import Session
 
 
 class VectorDBBackend(ABC):
@@ -53,7 +54,7 @@ class VectorDBBackend(ABC):
 class VikingDBBackend(VectorDBBackend):
     """VikingDB 后端实现"""
     
-    def __init__(self):
+    def __init__(self, db: Session | None = None):
         from app.services.viking_rag_service import VikingRAGService
         self.service = VikingRAGService()
     
@@ -82,7 +83,7 @@ class VikingDBBackend(VectorDBBackend):
 class PgVectorBackend(VectorDBBackend):
     """PostgreSQL + pgvector 后端实现（待实现）"""
     
-    def __init__(self):
+    def __init__(self, db: Session | None = None):
         # TODO: 实现 pgvector 连接
         pass
     
@@ -113,10 +114,10 @@ class PgVectorBackend(VectorDBBackend):
 class QdrantBackend(VectorDBBackend):
     """Qdrant 后端实现"""
     
-    def __init__(self):
+    def __init__(self, db: Session | None = None):
         from app.services.qdrant_service import QdrantService
 
-        self.service = QdrantService()
+        self.service = QdrantService(db=db)
     
     def search(self, query_text: str, limit: int = 5, threshold: float = 0.7) -> List[Dict[str, Any]]:
         return self.service.search(query_text, limit=limit, threshold=threshold)
@@ -153,7 +154,7 @@ BACKEND_MAP = {
 }
 
 
-def get_vector_db_backend() -> VectorDBBackend:
+def get_vector_db_backend(db: Session | None = None) -> VectorDBBackend:
     """
     获取向量数据库后端实例
     
@@ -168,6 +169,15 @@ def get_vector_db_backend() -> VectorDBBackend:
     4. 重启服务
     """
     backend_name = os.getenv('VECTOR_DB_BACKEND', 'vikingdb').lower()
+    if db is not None:
+        try:
+            from app.core.config import settings
+            from app.services.config_service import ConfigService
+
+            config_service = ConfigService(db)
+            backend_name = config_service.get_vector_db_backend(settings.vector_db_backend).lower()
+        except Exception as exc:
+            print(f"⚠️  获取向量数据库配置失败，使用环境变量默认值：{exc}")
     
     if backend_name not in BACKEND_MAP:
         print(f"⚠️  未知的后端：{backend_name}，使用默认后端：vikingdb")
@@ -176,23 +186,25 @@ def get_vector_db_backend() -> VectorDBBackend:
     backend_class = BACKEND_MAP[backend_name]
     print(f"🔧 使用向量数据库后端：{backend_name}")
     
-    return backend_class()
+    return backend_class(db=db)
 
 
 # 全局实例
 _vector_db_backend: Optional[VectorDBBackend] = None
 
 
-def init_vector_db():
+def init_vector_db(db: Session | None = None):
     """初始化向量数据库"""
     global _vector_db_backend
-    _vector_db_backend = get_vector_db_backend()
+    _vector_db_backend = get_vector_db_backend(db=db)
     return _vector_db_backend
 
 
-def get_vector_db() -> VectorDBBackend:
+def get_vector_db(db: Session | None = None) -> VectorDBBackend:
     """获取向量数据库实例"""
     global _vector_db_backend
+    if db is not None:
+        return get_vector_db_backend(db=db)
     if _vector_db_backend is None:
         _vector_db_backend = init_vector_db()
     return _vector_db_backend

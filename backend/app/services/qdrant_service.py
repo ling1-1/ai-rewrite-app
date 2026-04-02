@@ -14,6 +14,7 @@ from typing import Any, Dict, List
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.services.embedding import get_embedding
@@ -22,16 +23,35 @@ from app.services.embedding import get_embedding
 class QdrantService:
     """Qdrant 服务封装"""
 
-    def __init__(self) -> None:
-        if not settings.qdrant_url:
+    def __init__(self, db: Session | None = None) -> None:
+        self.db = db
+        qdrant_url = settings.qdrant_url
+        qdrant_api_key = settings.qdrant_api_key
+        collection_name = settings.qdrant_collection
+        embedding_dimension = settings.embedding_dimension
+
+        if db:
+            try:
+                from app.services.config_service import ConfigService
+
+                config_service = ConfigService(db)
+                qdrant_url = config_service.get_qdrant_url(settings.qdrant_url)
+                qdrant_api_key = config_service.get_qdrant_api_key(settings.qdrant_api_key)
+                collection_name = config_service.get_qdrant_collection(settings.qdrant_collection)
+                embedding_dimension = config_service.get_embedding_dimension(settings.embedding_dimension)
+            except Exception as exc:
+                print(f"⚠️  获取 Qdrant 配置失败，使用环境变量默认值：{exc}")
+
+        if not qdrant_url:
             raise ValueError("请配置 QDRANT_URL 环境变量")
-        if not settings.qdrant_api_key:
+        if not qdrant_api_key:
             raise ValueError("请配置 QDRANT_API_KEY 环境变量")
 
-        self.collection_name = settings.qdrant_collection
+        self.collection_name = collection_name
+        self.embedding_dimension = embedding_dimension
         self.client = QdrantClient(
-            url=settings.qdrant_url,
-            api_key=settings.qdrant_api_key,
+            url=qdrant_url,
+            api_key=qdrant_api_key,
             timeout=30.0,
         )
         self._ensure_collection()
@@ -45,7 +65,7 @@ class QdrantService:
         self.client.create_collection(
             collection_name=self.collection_name,
             vectors_config=models.VectorParams(
-                size=settings.embedding_dimension,
+                size=self.embedding_dimension,
                 distance=models.Distance.COSINE,
             ),
         )
@@ -58,7 +78,7 @@ class QdrantService:
         extra_payload: Dict[str, Any] | None = None,
         doc_id: str | None = None,
     ) -> str:
-        embedding = get_embedding(original_text, input_type="document")
+        embedding = get_embedding(original_text, input_type="document", db=self.db)
         point_id = doc_id or str(uuid.uuid4())
         payload: Dict[str, Any] = {
             "original_text": original_text,
@@ -92,7 +112,7 @@ class QdrantService:
             points.append(
                 models.PointStruct(
                     id=document.get("id") or str(uuid.uuid4()),
-                    vector=get_embedding(original_text, input_type="document"),
+                    vector=get_embedding(original_text, input_type="document", db=self.db),
                     payload={
                         "original_text": original_text,
                         "rewrite_text": rewrite_text,
@@ -118,7 +138,7 @@ class QdrantService:
         limit: int = 5,
         threshold: float = 0.7,
     ) -> List[Dict[str, Any]]:
-        query_embedding = get_embedding(query_text, input_type="query")
+        query_embedding = get_embedding(query_text, input_type="query", db=self.db)
         results = self._query_points(query_embedding, limit=limit, threshold=threshold)
 
         documents: List[Dict[str, Any]] = []

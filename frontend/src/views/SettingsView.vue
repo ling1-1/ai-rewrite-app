@@ -58,22 +58,36 @@
           </section>
 
           <section class="settings-section">
-            <h2>📝 系统提示词</h2>
+            <h2>📝 降重提示词</h2>
             <div class="form-group">
-              <label for="systemPrompt">
-                改写助手提示词
-                <span class="hint">定义 AI 助手的角色和行为规范</span>
+              <label for="rewritePromptZh">
+                中文降重提示词
+                <span class="hint">用于中文论文降重模式，建议保持学术表达和语义不变。</span>
               </label>
               <textarea
-                id="systemPrompt"
-                v-model="config.system_prompt"
+                id="rewritePromptZh"
+                v-model="config.rewrite_prompt_zh"
                 rows="12"
                 class="form-textarea"
-                placeholder="请输入系统提示词..."
+                placeholder="请输入中文降重提示词..."
               ></textarea>
             </div>
 
-            <button @click="saveSystemPrompt" class="btn btn-primary">保存提示词</button>
+            <div class="form-group">
+              <label for="rewritePromptEn">
+                英文降重提示词
+                <span class="hint">用于英文论文降重模式，建议保持英文论文的正式和清晰表达。</span>
+              </label>
+              <textarea
+                id="rewritePromptEn"
+                v-model="config.rewrite_prompt_en"
+                rows="12"
+                class="form-textarea"
+                placeholder="请输入英文降重提示词..."
+              ></textarea>
+            </div>
+
+            <button @click="saveRewritePrompt" class="btn btn-primary">保存降重提示词</button>
           </section>
 
           <section class="settings-section">
@@ -293,13 +307,117 @@
 
           <section class="settings-section">
             <h2>🗄️ 向量数据库</h2>
-            <div class="info-box">
-              <p><strong>当前后端:</strong> {{ vectorBackend }}</p>
-              <p class="hint">
-                修改向量数据库后端需要编辑 .env 文件并重启服务<br>
-                支持的后端：vikingdb, pgvector, qdrant, milvus
-              </p>
+            <div class="model-config-grid">
+              <div class="model-config-card">
+                <h3>向量模型</h3>
+                <div class="form-group">
+                  <label for="embeddingProvider">Provider</label>
+                  <input
+                    id="embeddingProvider"
+                    v-model="config.embedding_provider"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：voyage"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="embeddingApiKey">API Key</label>
+                  <el-input
+                    id="embeddingApiKey"
+                    v-model="config.embedding_api_key"
+                    type="password"
+                    show-password
+                    placeholder="请输入向量模型 API Key"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="embeddingModel">模型名称</label>
+                  <input
+                    id="embeddingModel"
+                    v-model="config.embedding_model"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：voyage-4-lite"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="embeddingBaseUrl">Base URL</label>
+                  <input
+                    id="embeddingBaseUrl"
+                    v-model="config.embedding_base_url"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：https://api.voyageai.com/v1"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="embeddingDimension">向量维度</label>
+                  <input
+                    id="embeddingDimension"
+                    v-model.number="config.embedding_dimension"
+                    type="number"
+                    min="1"
+                    class="form-input"
+                  />
+                </div>
+              </div>
+
+              <div class="model-config-card">
+                <h3>向量数据库</h3>
+                <div class="form-group">
+                  <label for="vectorDbBackend">
+                    后端类型
+                    <span class="hint">当前生效后端：{{ vectorBackend }}</span>
+                  </label>
+                  <input
+                    id="vectorDbBackend"
+                    v-model="config.vector_db_backend"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：qdrant"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="qdrantUrl">Qdrant URL</label>
+                  <input
+                    id="qdrantUrl"
+                    v-model="config.qdrant_url"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：https://xxx.aws.cloud.qdrant.io:6333"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="qdrantApiKey">Qdrant API Key</label>
+                  <el-input
+                    id="qdrantApiKey"
+                    v-model="config.qdrant_api_key"
+                    type="password"
+                    show-password
+                    placeholder="请输入 Qdrant API Key"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="qdrantCollection">Collection 名称</label>
+                  <input
+                    id="qdrantCollection"
+                    v-model="config.qdrant_collection"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：ai_rewrite_records_voyage"
+                  />
+                </div>
+              </div>
             </div>
+
+            <button @click="saveVectorConfig" class="btn btn-primary">保存向量配置</button>
           </section>
         </el-tab-pane>
 
@@ -490,7 +608,8 @@ const currentUserId = ref(null);
 const config = ref({
   top_k: 3,
   similarity_threshold: 0.7,
-  system_prompt: "",
+  rewrite_prompt_zh: "",
+  rewrite_prompt_en: "",
   defense_system_prompt: "",
   defense_ppt_prompt: "",
   defense_speech_prompt: "",
@@ -504,6 +623,15 @@ const config = ref({
   defense_base_url: "",
   defense_max_tokens: 2048,
   defense_temperature: 0.5,
+  embedding_provider: "voyage",
+  embedding_api_key: "",
+  embedding_model: "",
+  embedding_base_url: "",
+  embedding_dimension: 1024,
+  vector_db_backend: "qdrant",
+  qdrant_url: "",
+  qdrant_api_key: "",
+  qdrant_collection: "",
   enable_registration: true,
 });
 
@@ -605,18 +733,20 @@ async function requestApi(method, path, payload) {
 }
 
 async function loadConfigs() {
-  const [ragData, promptData, defensePromptData, modelData, flagsData] = await Promise.all([
+  const [ragData, rewritePromptData, defensePromptData, modelData, vectorData, flagsData] = await Promise.all([
     requestApi("GET", "/admin/config/rag/config"),
-    requestApi("GET", "/admin/config/prompt/system"),
+    requestApi("GET", "/admin/config/prompt/rewrite"),
     requestApi("GET", "/admin/config/prompt/defense"),
     requestApi("GET", "/admin/config/model/config"),
+    requestApi("GET", "/admin/config/vector/config"),
     requestApi("GET", "/admin/config/flags"),
   ]);
 
   config.value = {
     top_k: ragData.top_k,
     similarity_threshold: ragData.similarity_threshold,
-    system_prompt: promptData.prompt,
+    rewrite_prompt_zh: rewritePromptData.zh_prompt,
+    rewrite_prompt_en: rewritePromptData.en_prompt,
     defense_system_prompt: defensePromptData.system_prompt,
     defense_ppt_prompt: defensePromptData.ppt_prompt,
     defense_speech_prompt: defensePromptData.speech_prompt,
@@ -630,8 +760,18 @@ async function loadConfigs() {
     defense_base_url: modelData.defense_base_url,
     defense_max_tokens: modelData.defense_max_tokens,
     defense_temperature: modelData.defense_temperature,
+    embedding_provider: vectorData.embedding_provider,
+    embedding_api_key: vectorData.embedding_api_key,
+    embedding_model: vectorData.embedding_model,
+    embedding_base_url: vectorData.embedding_base_url,
+    embedding_dimension: vectorData.embedding_dimension,
+    vector_db_backend: vectorData.vector_db_backend,
+    qdrant_url: vectorData.qdrant_url,
+    qdrant_api_key: vectorData.qdrant_api_key,
+    qdrant_collection: vectorData.qdrant_collection,
     enable_registration: flagsData.enable_registration,
   };
+  vectorBackend.value = vectorData.vector_db_backend;
   setCachedRegistrationFlag(flagsData.enable_registration);
 }
 
@@ -696,12 +836,13 @@ async function saveRAGConfig() {
   }
 }
 
-async function saveSystemPrompt() {
+async function saveRewritePrompt() {
   try {
-    await requestApi("PUT", "/admin/config/prompt/system", {
-      prompt: config.value.system_prompt,
+    await requestApi("PUT", "/admin/config/prompt/rewrite", {
+      zh_prompt: config.value.rewrite_prompt_zh,
+      en_prompt: config.value.rewrite_prompt_en,
     });
-    ElMessage.success("系统提示词已保存");
+    ElMessage.success("降重提示词已保存");
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "保存失败"));
   }
@@ -740,12 +881,31 @@ async function saveModelConfig() {
   }
 }
 
+async function saveVectorConfig() {
+  try {
+    const data = await requestApi("PUT", "/admin/config/vector/config", {
+      embedding_provider: config.value.embedding_provider,
+      embedding_api_key: config.value.embedding_api_key,
+      embedding_model: config.value.embedding_model,
+      embedding_base_url: config.value.embedding_base_url,
+      embedding_dimension: config.value.embedding_dimension,
+      vector_db_backend: config.value.vector_db_backend,
+      qdrant_url: config.value.qdrant_url,
+      qdrant_api_key: config.value.qdrant_api_key,
+      qdrant_collection: config.value.qdrant_collection,
+    });
+    vectorBackend.value = data.vector_db_backend;
+    ElMessage.success("向量配置已保存");
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "保存失败"));
+  }
+}
+
 async function saveFeatureFlags() {
   try {
-    await requestApi(
-      "PUT",
-      `/admin/config/flags/registration?enable=${config.value.enable_registration}`
-    );
+    await requestApi("PUT", "/admin/config/flags", {
+      enable_registration: config.value.enable_registration,
+    });
     setCachedRegistrationFlag(config.value.enable_registration);
     ElMessage.success("功能开关已保存");
   } catch (error) {

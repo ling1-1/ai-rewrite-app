@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class RewriteRequest(BaseModel):
     source_text: str
+    rewrite_mode: str = "zh"
 
 
 class RewriteResponse(BaseModel):

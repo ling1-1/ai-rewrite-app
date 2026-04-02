@@ -32,12 +32,16 @@ class RAGConfigUpdateRequest(BaseModel):
 
 class PublicFlagsResponse(BaseModel):
     enable_registration: bool
+    enable_vector_retrieval: bool
 
 
 @router.get("/public/flags", response_model=PublicFlagsResponse)
 def get_public_flags(db: Session = Depends(get_db)):
     config_service = ConfigService(db)
-    return {"enable_registration": config_service.is_registration_enabled()}
+    return {
+        "enable_registration": config_service.is_registration_enabled(),
+        "enable_vector_retrieval": config_service.is_vector_retrieval_enabled(),
+    }
 
 
 @router.get("/rag", response_model=RAGConfigResponse)

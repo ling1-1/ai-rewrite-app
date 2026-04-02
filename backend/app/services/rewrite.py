@@ -9,8 +9,8 @@ class RewriteServiceError(Exception):
     pass
 
 
-# 默认系统提示词（如果数据库中没有配置）
-DEFAULT_SYSTEM_PROMPT = """
+# 默认中文提示词（如果数据库中没有配置）
+DEFAULT_SYSTEM_PROMPT_ZH = """
 你是"JS 论文工作室"的论文改写助手。
 
 你的任务是将用户输入的中文论文内容进行学术化改写和表达优化，但必须遵守以下规则：
@@ -23,20 +23,52 @@ DEFAULT_SYSTEM_PROMPT = """
 """.strip()
 
 
-def build_rag_prompt(similar_docs: list[dict], user_input: str) -> str:
+DEFAULT_SYSTEM_PROMPT_EN = """
+You are the rewrite assistant for "JS Paper Studio".
+
+Your task is to rewrite the user's English academic text while strictly following these rules:
+1. Preserve the original meaning, facts, conclusions, and logical structure.
+2. Improve sentence flow, transitions, and academic tone so the writing reads more natural and polished.
+3. Keep technical terms, proper nouns, numbers, years, citation markers, and key concepts unchanged unless rephrasing is necessary for grammar.
+4. Maintain a formal, concise, and clear academic writing style in English.
+5. Do not add explanations, notes, headings, bullet points, quotation marks, or commentary.
+6. Return only the rewritten body text.
+""".strip()
+
+
+def build_rag_prompt(similar_docs: list[dict], user_input: str, rewrite_mode: str = "zh") -> str:
     """根据检索结果构建统一的 RAG 提示词。"""
     if not similar_docs:
         return user_input
 
     examples = []
     for i, doc in enumerate(similar_docs[:5], 1):
-        example = f"""示例 {i}:
+        if rewrite_mode == "en":
+            example = f"""Example {i}:
+Original: {doc.get('original_text', '')[:200]}...
+Rewrite: {doc.get('rewrite_text', '')[:200]}...
+"""
+        else:
+            example = f"""示例 {i}:
 原文：{doc.get('original_text', '')[:200]}...
 改写：{doc.get('rewrite_text', '')[:200]}...
 """
         examples.append(example)
 
     examples_text = "\n\n".join(examples)
+    if rewrite_mode == "en":
+        return f"""You are a professional academic rewrite assistant.
+
+Please refer to the following rewrite examples, ordered by relevance:
+
+{examples_text}
+
+Now rewrite the following academic passage in a polished English academic style while preserving the meaning:
+
+Original: {user_input}
+
+Rewrite:"""
+
     return f"""你是一个专业的论文改写助手。
 
 参考以下改写示例（按相关性排序）：
@@ -53,7 +85,8 @@ def build_rag_prompt(similar_docs: list[dict], user_input: str) -> str:
 def rewrite_text(
     source_text: str,
     db: Optional[Session] = None,
-    use_rag: bool = True
+    use_rag: bool = True,
+    rewrite_mode: str = "zh",
 ) -> str:
     """
     改写文本（支持 RAG 增强）
@@ -67,7 +100,14 @@ def rewrite_text(
         str: 改写后的文本
     """
     # 1. 获取系统提示词（从数据库配置）
-    system_prompt = DEFAULT_SYSTEM_PROMPT
+    rewrite_mode = (rewrite_mode or "zh").strip().lower()
+    if rewrite_mode not in {"zh", "en"}:
+        rewrite_mode = "zh"
+
+    default_system_prompt = (
+        DEFAULT_SYSTEM_PROMPT_EN if rewrite_mode == "en" else DEFAULT_SYSTEM_PROMPT_ZH
+    )
+    system_prompt = default_system_prompt
     api_key = settings.anthropic_api_key
     model_name = settings.anthropic_model
     base_url = settings.anthropic_base_url.rstrip('/')
@@ -77,7 +117,14 @@ def rewrite_text(
         try:
             from app.services.config_service import ConfigService
             config_service = ConfigService(db)
-            system_prompt = config_service.get_system_prompt() or DEFAULT_SYSTEM_PROMPT
+            if rewrite_mode == "en":
+                system_prompt = config_service.get_rewrite_prompt_en() or DEFAULT_SYSTEM_PROMPT_EN
+            else:
+                system_prompt = (
+                    config_service.get_rewrite_prompt_zh()
+                    or config_service.get_system_prompt()
+                    or DEFAULT_SYSTEM_PROMPT_ZH
+                )
             api_key = config_service.get_rewrite_api_key(settings.anthropic_api_key)
             model_name = config_service.get_rewrite_model(settings.anthropic_model)
             base_url = config_service.get_rewrite_base_url(settings.anthropic_base_url).rstrip('/')
@@ -95,35 +142,50 @@ def rewrite_text(
             from app.services.vector_db_backend import get_vector_db
             
             config_service = ConfigService(db) if db else None
-            rag_config = config_service.get_rag_config() if config_service else {'top_k': 3, 'similarity_threshold': 0.7}
+            rag_config = (
+                config_service.get_rag_config()
+                if config_service
+                else {'top_k': 3, 'similarity_threshold': 0.7, 'enabled': True}
+            )
+            if not rag_config.get("enabled", True):
+                print("⚠️  当前管理员已关闭向量检索，跳过 RAG")
+                use_rag = False
             
-            print(f"\n{'='*60}")
-            print(f"🔍 RAG 检索启动")
-            print(f"  查询：{source_text[:50]}...")
-            print(f"  top_k: {rag_config['top_k']}")
-            print(f"  相似度阈值：{rag_config['similarity_threshold']}")
-            print(f"{'='*60}\n")
-            
-            # 使用向量数据库抽象层检索
-            vector_db = get_vector_db()
-            similar_docs = vector_db.search(source_text, limit=rag_config['top_k'])
-            
-            print(f"📚 检索到 {len(similar_docs)} 条相似记录:\n")
-            for i, doc in enumerate(similar_docs, 1):
-                print(f"[{i}] 相似度：{doc.get('score', 0):.4f}")
-                print(f"    原文：{doc.get('original_text', '')[:80]}...")
-                print(f"    改写：{doc.get('rewrite_text', '')[:80]}...")
-                print()
-            
-            # 构建 RAG 提示词
-            if similar_docs:
-                prompt = build_rag_prompt(similar_docs, source_text)
-                
-                print(f"📝 构建的完整提示词:\n{'-'*60}")
-                print(prompt)
-                print(f"{'-'*60}\n")
+            if not use_rag:
+                rag_config = {'top_k': 3, 'similarity_threshold': 0.7}
             else:
-                print(f"⚠️  未检索到相似记录，使用基础提示词\n")
+                print(f"\n{'='*60}")
+                print(f"🔍 RAG 检索启动")
+                print(f"  模式：{'英文' if rewrite_mode == 'en' else '中文'}")
+                print(f"  查询：{source_text[:50]}...")
+                print(f"  top_k: {rag_config['top_k']}")
+                print(f"  相似度阈值：{rag_config['similarity_threshold']}")
+                print(f"{'='*60}\n")
+
+                # 使用向量数据库抽象层检索
+                vector_db = get_vector_db(db=db)
+                similar_docs = vector_db.search(
+                    source_text,
+                    limit=rag_config['top_k'],
+                    threshold=rag_config['similarity_threshold'],
+                )
+
+                print(f"📚 检索到 {len(similar_docs)} 条相似记录:\n")
+                for i, doc in enumerate(similar_docs, 1):
+                    print(f"[{i}] 相似度：{doc.get('score', 0):.4f}")
+                    print(f"    原文：{doc.get('original_text', '')[:80]}...")
+                    print(f"    改写：{doc.get('rewrite_text', '')[:80]}...")
+                    print()
+
+                # 构建 RAG 提示词
+                if similar_docs:
+                    prompt = build_rag_prompt(similar_docs, source_text, rewrite_mode=rewrite_mode)
+                    
+                    print(f"📝 构建的完整提示词:\n{'-'*60}")
+                    print(prompt)
+                    print(f"{'-'*60}\n")
+                else:
+                    print(f"⚠️  未检索到相似记录，使用基础提示词\n")
                 
         except Exception as e:
             print(f"⚠️  RAG 检索失败，使用基础提示词：{e}\n")

@@ -5,6 +5,7 @@ Embedding 服务
 """
 
 import httpx
+from sqlalchemy.orm import Session
 from app.core.config import settings
 
 
@@ -13,7 +14,7 @@ class EmbeddingServiceError(Exception):
     pass
 
 
-def get_embedding(text: str, input_type: str = "document") -> list:
+def get_embedding(text: str, input_type: str = "document", db: Session | None = None) -> list:
     """
     获取文本的向量嵌入
 
@@ -27,22 +28,41 @@ def get_embedding(text: str, input_type: str = "document") -> list:
     Raises:
         EmbeddingServiceError: API 调用失败
     """
-    if not settings.embedding_api_key:
+    provider = settings.embedding_provider
+    api_key = settings.embedding_api_key
+    base_url = settings.embedding_base_url
+    model_name = settings.embedding_model
+    dimension = settings.embedding_dimension
+
+    if db:
+        try:
+            from app.services.config_service import ConfigService
+
+            config_service = ConfigService(db)
+            provider = config_service.get_embedding_provider(settings.embedding_provider)
+            api_key = config_service.get_embedding_api_key(settings.embedding_api_key)
+            base_url = config_service.get_embedding_base_url(settings.embedding_base_url)
+            model_name = config_service.get_embedding_model(settings.embedding_model)
+            dimension = config_service.get_embedding_dimension(settings.embedding_dimension)
+        except Exception as exc:
+            print(f"⚠️  获取 Embedding 配置失败，使用环境变量默认值：{exc}")
+
+    if not api_key:
         raise EmbeddingServiceError("尚未配置 Embedding API Key")
 
-    provider = settings.embedding_provider.lower().strip()
+    provider = provider.lower().strip()
     if provider != "voyage":
-        raise EmbeddingServiceError(f"暂不支持的 Embedding Provider: {settings.embedding_provider}")
+        raise EmbeddingServiceError(f"暂不支持的 Embedding Provider: {provider}")
 
-    url = f"{settings.embedding_base_url.rstrip('/')}/embeddings"
+    url = f"{base_url.rstrip('/')}/embeddings"
     payload = {
         "input": [text.strip()],
-        "model": settings.embedding_model,
+        "model": model_name,
         "input_type": input_type,
-        "output_dimension": settings.embedding_dimension,
+        "output_dimension": dimension,
     }
     headers = {
-        "Authorization": f"Bearer {settings.embedding_api_key}",
+        "Authorization": f"Bearer {api_key}",
         "content-type": "application/json",
     }
     

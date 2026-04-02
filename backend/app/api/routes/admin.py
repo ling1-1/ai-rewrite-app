@@ -33,6 +33,7 @@ class RAGConfigResponse(BaseModel):
     """RAG 配置响应"""
     top_k: int
     similarity_threshold: float
+    enabled: bool
 
 
 class RAGConfigUpdateRequest(BaseModel):
@@ -41,14 +42,14 @@ class RAGConfigUpdateRequest(BaseModel):
     similarity_threshold: Optional[float] = None
 
 
-class SystemPromptResponse(BaseModel):
-    """系统提示词响应"""
-    prompt: str
+class RewritePromptResponse(BaseModel):
+    zh_prompt: str
+    en_prompt: str
 
 
-class SystemPromptUpdateRequest(BaseModel):
-    """系统提示词更新请求"""
-    prompt: str
+class RewritePromptUpdateRequest(BaseModel):
+    zh_prompt: Optional[str] = None
+    en_prompt: Optional[str] = None
 
 
 class DefensePromptResponse(BaseModel):
@@ -66,6 +67,12 @@ class DefensePromptUpdateRequest(BaseModel):
 class FeatureFlagsResponse(BaseModel):
     """功能开关响应"""
     enable_registration: bool
+    enable_vector_retrieval: bool
+
+
+class FeatureFlagsUpdateRequest(BaseModel):
+    enable_registration: Optional[bool] = None
+    enable_vector_retrieval: Optional[bool] = None
 
 
 class ModelConfigResponse(BaseModel):
@@ -92,6 +99,30 @@ class ModelConfigUpdateRequest(BaseModel):
     defense_base_url: Optional[str] = None
     defense_max_tokens: Optional[int] = None
     defense_temperature: Optional[float] = None
+
+
+class VectorConfigResponse(BaseModel):
+    embedding_provider: str
+    embedding_api_key: str
+    embedding_model: str
+    embedding_base_url: str
+    embedding_dimension: int
+    vector_db_backend: str
+    qdrant_url: str
+    qdrant_api_key: str
+    qdrant_collection: str
+
+
+class VectorConfigUpdateRequest(BaseModel):
+    embedding_provider: Optional[str] = None
+    embedding_api_key: Optional[str] = None
+    embedding_model: Optional[str] = None
+    embedding_base_url: Optional[str] = None
+    embedding_dimension: Optional[int] = None
+    vector_db_backend: Optional[str] = None
+    qdrant_url: Optional[str] = None
+    qdrant_api_key: Optional[str] = None
+    qdrant_collection: Optional[str] = None
 
 
 @router.get("", summary="获取所有配置", tags=["admin"])
@@ -137,26 +168,64 @@ def update_rag_config(
     return config_service.get_rag_config()
 
 
-@router.get("/prompt/system", response_model=SystemPromptResponse, summary="获取系统提示词", tags=["admin"])
+@router.get("/prompt/rewrite", response_model=RewritePromptResponse, summary="获取降重提示词", tags=["admin"])
+def get_rewrite_prompt(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+    from app.services.rewrite import DEFAULT_SYSTEM_PROMPT_EN, DEFAULT_SYSTEM_PROMPT_ZH
+
+    return {
+        "zh_prompt": (
+            config_service.get_rewrite_prompt_zh()
+            or config_service.get_system_prompt()
+            or DEFAULT_SYSTEM_PROMPT_ZH
+        ),
+        "en_prompt": config_service.get_rewrite_prompt_en() or DEFAULT_SYSTEM_PROMPT_EN,
+    }
+
+
+@router.put("/prompt/rewrite", response_model=RewritePromptResponse, summary="更新降重提示词", tags=["admin"])
+def update_rewrite_prompt(
+    request: RewritePromptUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+    from app.services.rewrite import DEFAULT_SYSTEM_PROMPT_EN, DEFAULT_SYSTEM_PROMPT_ZH
+
+    if request.zh_prompt is not None:
+        config_service.set('rewrite_prompt_zh', request.zh_prompt)
+        config_service.set('system_prompt', request.zh_prompt)
+    if request.en_prompt is not None:
+        config_service.set('rewrite_prompt_en', request.en_prompt)
+
+    return {
+        "zh_prompt": (
+            config_service.get_rewrite_prompt_zh()
+            or config_service.get_system_prompt()
+            or DEFAULT_SYSTEM_PROMPT_ZH
+        ),
+        "en_prompt": config_service.get_rewrite_prompt_en() or DEFAULT_SYSTEM_PROMPT_EN,
+    }
+
+
+@router.get("/prompt/system", response_model=RewritePromptResponse, summary="获取降重提示词（兼容）", tags=["admin"])
 def get_system_prompt(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
-    """获取系统提示词（需要管理员权限）"""
-    config_service = ConfigService(db)
-    return {"prompt": config_service.get_system_prompt()}
+    return get_rewrite_prompt(db, current_user)
 
 
-@router.put("/prompt/system", response_model=SystemPromptResponse, summary="更新系统提示词", tags=["admin"])
+@router.put("/prompt/system", response_model=RewritePromptResponse, summary="更新降重提示词（兼容）", tags=["admin"])
 def update_system_prompt(
-    request: SystemPromptUpdateRequest,
+    request: RewritePromptUpdateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
-    """更新系统提示词（需要管理员权限）"""
-    config_service = ConfigService(db)
-    config_service.set('system_prompt', request.prompt)
-    return {"prompt": request.prompt}
+    return update_rewrite_prompt(request, db, current_user)
 
 
 @router.get("/prompt/defense", response_model=DefensePromptResponse, summary="获取答辩辅助提示词", tags=["admin"])
@@ -213,7 +282,25 @@ def get_feature_flags(
     """获取功能开关状态（需要管理员权限）"""
     config_service = ConfigService(db)
     return {
-        "enable_registration": config_service.is_registration_enabled()
+        "enable_registration": config_service.is_registration_enabled(),
+        "enable_vector_retrieval": config_service.is_vector_retrieval_enabled(),
+    }
+
+
+@router.put("/flags", response_model=FeatureFlagsResponse, summary="更新功能开关", tags=["admin"])
+def update_feature_flags(
+    request: FeatureFlagsUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+    if request.enable_registration is not None:
+        config_service.set('enable_registration', request.enable_registration)
+    if request.enable_vector_retrieval is not None:
+        config_service.set('enable_vector_retrieval', request.enable_vector_retrieval)
+    return {
+        "enable_registration": config_service.is_registration_enabled(),
+        "enable_vector_retrieval": config_service.is_vector_retrieval_enabled(),
     }
 
 
@@ -223,10 +310,12 @@ def update_registration_flag(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
-    """更新注册功能开关（需要管理员权限）"""
     config_service = ConfigService(db)
-    config_service.set('enable_registration', str(enable).lower())
-    return {"enable_registration": enable}
+    config_service.set('enable_registration', enable)
+    return {
+        "enable_registration": config_service.is_registration_enabled(),
+        "enable_vector_retrieval": config_service.is_vector_retrieval_enabled(),
+    }
 
 
 @router.get("/model/config", response_model=ModelConfigResponse, summary="获取模型配置", tags=["admin"])
@@ -307,6 +396,60 @@ def update_model_config(
         "defense_max_tokens": config_service.get_defense_max_tokens(settings.defense_max_tokens),
         "defense_temperature": config_service.get_defense_temperature(settings.defense_temperature),
     }
+
+
+@router.get("/vector/config", response_model=VectorConfigResponse, summary="获取向量配置", tags=["admin"])
+def get_vector_config(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+    return {
+        "embedding_provider": config_service.get_embedding_provider(settings.embedding_provider),
+        "embedding_api_key": config_service.get_embedding_api_key(settings.embedding_api_key),
+        "embedding_model": config_service.get_embedding_model(settings.embedding_model),
+        "embedding_base_url": config_service.get_embedding_base_url(settings.embedding_base_url),
+        "embedding_dimension": config_service.get_embedding_dimension(settings.embedding_dimension),
+        "vector_db_backend": config_service.get_vector_db_backend(settings.vector_db_backend),
+        "qdrant_url": config_service.get_qdrant_url(settings.qdrant_url),
+        "qdrant_api_key": config_service.get_qdrant_api_key(settings.qdrant_api_key),
+        "qdrant_collection": config_service.get_qdrant_collection(settings.qdrant_collection),
+    }
+
+
+@router.put("/vector/config", response_model=VectorConfigResponse, summary="更新向量配置", tags=["admin"])
+def update_vector_config(
+    request: VectorConfigUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+
+    if request.embedding_provider is not None:
+        config_service.set("embedding_provider", request.embedding_provider.strip())
+    if request.embedding_api_key is not None:
+        config_service.set("embedding_api_key", request.embedding_api_key.strip())
+    if request.embedding_model is not None:
+        config_service.set("embedding_model", request.embedding_model.strip())
+    if request.embedding_base_url is not None:
+        config_service.set("embedding_base_url", request.embedding_base_url.strip())
+    if request.embedding_dimension is not None:
+        if request.embedding_dimension <= 0:
+            raise HTTPException(400, "embedding_dimension 必须大于 0")
+        config_service.set("embedding_dimension", request.embedding_dimension)
+    if request.vector_db_backend is not None:
+        backend = request.vector_db_backend.strip().lower()
+        if backend not in {"vikingdb", "pgvector", "qdrant"}:
+            raise HTTPException(400, "vector_db_backend 仅支持 vikingdb、pgvector、qdrant")
+        config_service.set("vector_db_backend", backend)
+    if request.qdrant_url is not None:
+        config_service.set("qdrant_url", request.qdrant_url.strip())
+    if request.qdrant_api_key is not None:
+        config_service.set("qdrant_api_key", request.qdrant_api_key.strip())
+    if request.qdrant_collection is not None:
+        config_service.set("qdrant_collection", request.qdrant_collection.strip())
+
+    return get_vector_config(db, current_user)
 
 
 @router.get("/{key}", response_model=ConfigResponse, summary="获取单个配置")

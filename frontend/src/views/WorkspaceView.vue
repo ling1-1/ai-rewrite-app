@@ -39,10 +39,39 @@
                 <span class="muted">{{ sourceText.trim().length }} 字</span>
               </div>
 
+              <div class="rewrite-mode-bar">
+                <div class="rewrite-mode-group">
+                  <span class="rewrite-mode-label">降重模式</span>
+                  <el-radio-group v-model="rewriteMode" size="small">
+                    <el-radio-button label="zh">中文模式</el-radio-button>
+                    <el-radio-button label="en">英文模式</el-radio-button>
+                  </el-radio-group>
+                </div>
+
+                <label class="rag-toggle">
+                  <span>向量检索</span>
+                  <el-switch
+                    v-model="useVectorRetrieval"
+                    :disabled="!vectorRetrievalAvailable"
+                    inline-prompt
+                    active-text="开"
+                    inactive-text="关"
+                  />
+                </label>
+              </div>
+
+              <p v-if="!vectorRetrievalAvailable" class="mode-hint">
+                当前管理员已关闭向量检索，此处暂不可开启。
+              </p>
+
               <div class="editor-box">
                 <textarea
                   v-model="sourceText"
-                  placeholder="把需要处理的论文原文直接粘贴到这里。后续如果要接“论文原文 + 降重报告分段处理”，会从左侧功能入口继续扩展。"
+                  :placeholder="
+                    rewriteMode === 'en'
+                      ? '把需要处理的英文论文原文直接粘贴到这里。后续如果要接“论文原文 + 降重报告分段处理”，会从左侧功能入口继续扩展。'
+                      : '把需要处理的论文原文直接粘贴到这里。后续如果要接“论文原文 + 降重报告分段处理”，会从左侧功能入口继续扩展。'
+                  "
                 />
               </div>
 
@@ -160,6 +189,7 @@ import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useAuthStore } from "../stores/auth";
 import http from "../api/http";
+import { fetchPublicFlags } from "../api/publicFlags";
 import { getErrorMessage } from "../utils/error";
 import HistoryEditDialog from "../components/HistoryEditDialog.vue";
 import FeatureSidebar from "../components/FeatureSidebar.vue";
@@ -172,6 +202,9 @@ const loading = ref(false);
 const history = ref([]);
 const activeId = ref(null);
 const editingRecord = ref(null);
+const rewriteMode = ref("zh");
+const useVectorRetrieval = ref(true);
+const vectorRetrievalAvailable = ref(true);
 
 function sortHistoryItems(items) {
   return [...items].sort((a, b) => {
@@ -213,9 +246,13 @@ async function handleRewrite() {
   loading.value = true;
 
   try {
-    const { data } = await http.post("/rewrite", {
-      source_text: sourceText.value
-    });
+    const { data } = await http.post(
+      `/rewrite?use_rag=${useVectorRetrieval.value && vectorRetrievalAvailable.value}`,
+      {
+        source_text: sourceText.value,
+        rewrite_mode: rewriteMode.value,
+      }
+    );
     resultText.value = data.result_text;
     activeId.value = data.id;
     ElMessage.success("处理完成");
@@ -325,15 +362,66 @@ function formatDate(value) {
   return new Date(value).toLocaleString("zh-CN");
 }
 
-onMounted(loadHistory);
+async function initializeWorkspace() {
+  await loadHistory();
+
+  try {
+    const flags = await fetchPublicFlags();
+    vectorRetrievalAvailable.value = flags.enable_vector_retrieval !== false;
+    useVectorRetrieval.value = vectorRetrievalAvailable.value;
+  } catch (error) {
+    vectorRetrievalAvailable.value = true;
+    useVectorRetrieval.value = true;
+    console.warn("加载公开功能开关失败，向量检索默认开启", error);
+  }
+}
+
+onMounted(initializeWorkspace);
 </script>
 
 <style scoped>
+.rewrite-mode-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .history-item-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.rewrite-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.rewrite-mode-label {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rag-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mode-hint {
+  margin: -4px 0 12px;
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 .history-item-title {

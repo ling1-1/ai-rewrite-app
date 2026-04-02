@@ -27,13 +27,18 @@ class ConfigService:
             return default
         
         # 根据 key 类型转换
-        if key in ['rag_top_k', 'rewrite_max_tokens', 'defense_max_tokens']:
+        if key in [
+            'rag_top_k',
+            'rewrite_max_tokens',
+            'defense_max_tokens',
+            'embedding_dimension',
+        ]:
             return int(config.value)
         elif key in ['rag_similarity_threshold']:
             return float(config.value)
         elif key in ['rewrite_temperature', 'defense_temperature']:
             return float(config.value)
-        elif key in ['enable_registration']:
+        elif key in ['enable_registration', 'enable_vector_retrieval']:
             if isinstance(config.value, bool):
                 return config.value
             if isinstance(config.value, (int, float)):
@@ -44,11 +49,11 @@ class ConfigService:
 
     def _serialize_value(self, key: str, value: Any) -> Any:
         """按配置项语义存储原生类型，兼容 PostgreSQL JSONB。"""
-        if key in {'rag_top_k', 'rewrite_max_tokens', 'defense_max_tokens'}:
+        if key in {'rag_top_k', 'rewrite_max_tokens', 'defense_max_tokens', 'embedding_dimension'}:
             return int(value)
         if key in {'rag_similarity_threshold', 'rewrite_temperature', 'defense_temperature'}:
             return float(value)
-        if key == 'enable_registration':
+        if key in {'enable_registration', 'enable_vector_retrieval'}:
             if isinstance(value, bool):
                 return value
             if isinstance(value, (int, float)):
@@ -86,12 +91,19 @@ class ConfigService:
         """获取 RAG 配置"""
         return {
             'top_k': self.get('rag_top_k', 3),
-            'similarity_threshold': self.get('rag_similarity_threshold', 0.7)
+            'similarity_threshold': self.get('rag_similarity_threshold', 0.7),
+            'enabled': self.get('enable_vector_retrieval', True),
         }
     
     def get_system_prompt(self) -> str:
         """获取系统提示词"""
         return self.get('system_prompt', '')
+
+    def get_rewrite_prompt_zh(self) -> str:
+        return self.get('rewrite_prompt_zh', '')
+
+    def get_rewrite_prompt_en(self) -> str:
+        return self.get('rewrite_prompt_en', '')
 
     def get_defense_system_prompt(self) -> str:
         return self.get('defense_system_prompt', '')
@@ -117,6 +129,19 @@ class ConfigService:
             'defense_temperature': self.get('defense_temperature', None),
         }
 
+    def get_vector_config(self) -> dict:
+        return {
+            'embedding_provider': self.get('embedding_provider', ''),
+            'embedding_api_key': self.get('embedding_api_key', ''),
+            'embedding_model': self.get('embedding_model', ''),
+            'embedding_base_url': self.get('embedding_base_url', ''),
+            'embedding_dimension': self.get('embedding_dimension', None),
+            'vector_db_backend': self.get('vector_db_backend', ''),
+            'qdrant_url': self.get('qdrant_url', ''),
+            'qdrant_api_key': self.get('qdrant_api_key', ''),
+            'qdrant_collection': self.get('qdrant_collection', ''),
+        }
+
     def get_rewrite_api_key(self, default_api_key: str) -> str:
         return self.get('rewrite_api_key', default_api_key) or default_api_key
 
@@ -133,6 +158,34 @@ class ConfigService:
     def get_rewrite_temperature(self, default_temperature: float) -> float:
         value = self.get('rewrite_temperature', default_temperature)
         return float(value or default_temperature)
+
+    def get_embedding_provider(self, default_provider: str) -> str:
+        return self.get('embedding_provider', default_provider) or default_provider
+
+    def get_embedding_api_key(self, default_api_key: str) -> str:
+        return self.get('embedding_api_key', default_api_key) or default_api_key
+
+    def get_embedding_model(self, default_model: str) -> str:
+        return self.get('embedding_model', default_model) or default_model
+
+    def get_embedding_base_url(self, default_base_url: str) -> str:
+        return self.get('embedding_base_url', default_base_url) or default_base_url
+
+    def get_embedding_dimension(self, default_dimension: int) -> int:
+        value = self.get('embedding_dimension', default_dimension)
+        return int(value or default_dimension)
+
+    def get_vector_db_backend(self, default_backend: str) -> str:
+        return self.get('vector_db_backend', default_backend) or default_backend
+
+    def get_qdrant_url(self, default_url: str) -> str:
+        return self.get('qdrant_url', default_url) or default_url
+
+    def get_qdrant_api_key(self, default_api_key: str) -> str:
+        return self.get('qdrant_api_key', default_api_key) or default_api_key
+
+    def get_qdrant_collection(self, default_collection: str) -> str:
+        return self.get('qdrant_collection', default_collection) or default_collection
 
     def get_defense_api_key(self, default_api_key: str) -> str:
         return self.get('defense_api_key', default_api_key) or default_api_key
@@ -154,3 +207,6 @@ class ConfigService:
     def is_registration_enabled(self) -> bool:
         """检查是否允许注册"""
         return self.get('enable_registration', True)
+
+    def is_vector_retrieval_enabled(self) -> bool:
+        return self.get('enable_vector_retrieval', True)
