@@ -106,6 +106,53 @@
               />
             </div>
 
+            <div class="form-group">
+              <label for="defenseBaseUrl">
+                答辩模型 Base URL
+                <span class="hint">答辩辅助链路可单独走另一家模型服务，例如火山方舟。API Key 仍建议通过环境变量 DEFENSE_API_KEY 配置。</span>
+              </label>
+              <input
+                id="defenseBaseUrl"
+                v-model="config.defense_base_url"
+                type="text"
+                class="form-input"
+                placeholder="例如：https://ark.cn-beijing.volces.com/api/v3"
+              />
+            </div>
+
+            <div class="model-grid">
+              <div class="form-group">
+                <label for="defenseMaxTokens">
+                  答辩最大输出长度
+                  <span class="hint">控制答辩PPT和稿子的输出长度上限。</span>
+                </label>
+                <input
+                  id="defenseMaxTokens"
+                  v-model.number="config.defense_max_tokens"
+                  type="number"
+                  min="256"
+                  max="8192"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="defenseTemperature">
+                  答辩温度
+                  <span class="hint">建议保持较低，保证表达更稳。</span>
+                </label>
+                <input
+                  id="defenseTemperature"
+                  v-model.number="config.defense_temperature"
+                  type="number"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  class="form-input"
+                />
+              </div>
+            </div>
+
             <button @click="saveModelConfig" class="btn btn-primary">保存模型配置</button>
           </section>
 
@@ -328,6 +375,9 @@ const config = ref({
   system_prompt: "",
   rewrite_model: "",
   defense_model: "",
+  defense_base_url: "",
+  defense_max_tokens: 2048,
+  defense_temperature: 0.5,
   enable_registration: true,
 });
 
@@ -442,6 +492,9 @@ async function loadConfigs() {
     system_prompt: promptData.prompt,
     rewrite_model: modelData.rewrite_model,
     defense_model: modelData.defense_model,
+    defense_base_url: modelData.defense_base_url,
+    defense_max_tokens: modelData.defense_max_tokens,
+    defense_temperature: modelData.defense_temperature,
     enable_registration: flagsData.enable_registration,
   };
   setCachedRegistrationFlag(flagsData.enable_registration);
@@ -524,6 +577,9 @@ async function saveModelConfig() {
     await requestApi("PUT", "/admin/config/model/config", {
       rewrite_model: config.value.rewrite_model,
       defense_model: config.value.defense_model,
+      defense_base_url: config.value.defense_base_url,
+      defense_max_tokens: config.value.defense_max_tokens,
+      defense_temperature: config.value.defense_temperature,
     });
     ElMessage.success("模型配置已保存");
   } catch (error) {
@@ -795,6 +851,12 @@ onMounted(initializePage);
 
 .form-group {
   margin-bottom: 1.5rem;
+}
+
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .form-group label {

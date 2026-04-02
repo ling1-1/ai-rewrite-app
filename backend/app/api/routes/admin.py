@@ -59,11 +59,17 @@ class FeatureFlagsResponse(BaseModel):
 class ModelConfigResponse(BaseModel):
     rewrite_model: str
     defense_model: str
+    defense_base_url: str
+    defense_max_tokens: int
+    defense_temperature: float
 
 
 class ModelConfigUpdateRequest(BaseModel):
     rewrite_model: Optional[str] = None
     defense_model: Optional[str] = None
+    defense_base_url: Optional[str] = None
+    defense_max_tokens: Optional[int] = None
+    defense_temperature: Optional[float] = None
 
 
 @router.get("", summary="获取所有配置", tags=["admin"])
@@ -164,6 +170,9 @@ def get_model_config(
     return {
         "rewrite_model": config_service.get_rewrite_model(settings.anthropic_model),
         "defense_model": config_service.get_defense_model(settings.defense_model),
+        "defense_base_url": config_service.get_defense_base_url(settings.defense_base_url or settings.anthropic_base_url),
+        "defense_max_tokens": config_service.get_defense_max_tokens(settings.defense_max_tokens),
+        "defense_temperature": config_service.get_defense_temperature(settings.defense_temperature),
     }
 
 
@@ -181,9 +190,25 @@ def update_model_config(
     if request.defense_model is not None:
         config_service.set("defense_model", request.defense_model.strip())
 
+    if request.defense_base_url is not None:
+        config_service.set("defense_base_url", request.defense_base_url.strip())
+
+    if request.defense_max_tokens is not None:
+        if not (256 <= request.defense_max_tokens <= 8192):
+            raise HTTPException(400, "defense_max_tokens 必须在 256-8192 之间")
+        config_service.set("defense_max_tokens", request.defense_max_tokens)
+
+    if request.defense_temperature is not None:
+        if not (0 <= request.defense_temperature <= 2):
+            raise HTTPException(400, "defense_temperature 必须在 0-2 之间")
+        config_service.set("defense_temperature", request.defense_temperature)
+
     return {
         "rewrite_model": config_service.get_rewrite_model(settings.anthropic_model),
         "defense_model": config_service.get_defense_model(settings.defense_model),
+        "defense_base_url": config_service.get_defense_base_url(settings.defense_base_url or settings.anthropic_base_url),
+        "defense_max_tokens": config_service.get_defense_max_tokens(settings.defense_max_tokens),
+        "defense_temperature": config_service.get_defense_temperature(settings.defense_temperature),
     }
 
 

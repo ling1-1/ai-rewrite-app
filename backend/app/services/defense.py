@@ -72,19 +72,25 @@ def generate_defense_flow(thesis_text: str, db: Optional[Session] = None) -> tup
 
 
 def _call_chat_model(user_prompt: str, db: Optional[Session] = None) -> str:
-    if not settings.anthropic_api_key:
-        raise DefenseServiceError("尚未配置 API Key")
+    api_key = settings.defense_api_key or settings.anthropic_api_key
+    if not api_key:
+        raise DefenseServiceError("尚未配置答辩模型 API Key")
 
     model_name = settings.defense_model or settings.anthropic_model
+    base_url = (settings.defense_base_url or settings.anthropic_base_url).rstrip("/")
+    max_tokens = settings.defense_max_tokens
+    temperature = settings.defense_temperature
     if db:
         try:
             from app.services.config_service import ConfigService
             config_service = ConfigService(db)
             model_name = config_service.get_defense_model(model_name)
+            base_url = config_service.get_defense_base_url(base_url).rstrip("/")
+            max_tokens = config_service.get_defense_max_tokens(max_tokens)
+            temperature = config_service.get_defense_temperature(temperature)
         except Exception as exc:
             print(f"⚠️ 获取答辩模型配置失败：{exc}")
 
-    base_url = settings.anthropic_base_url.rstrip("/")
     if base_url.endswith("/v3"):
         url = f"{base_url}/chat/completions"
     else:
@@ -92,15 +98,15 @@ def _call_chat_model(user_prompt: str, db: Optional[Session] = None) -> str:
 
     payload = {
         "model": model_name,
-        "max_tokens": settings.anthropic_max_tokens,
-        "temperature": 0.5,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
         "messages": [
             {"role": "system", "content": DEFENSE_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ],
     }
     headers = {
-        "Authorization": f"Bearer {settings.anthropic_api_key}",
+        "Authorization": f"Bearer {api_key}",
         "content-type": "application/json",
     }
 

@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     anthropic_base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
     anthropic_max_tokens: int = 4096
     anthropic_temperature: float = 0.7
+    defense_api_key: str = ""
+    defense_base_url: str = ""
+    defense_max_tokens: int = 2048
+    defense_temperature: float = 0.5
     
     # Embedding 配置
     embedding_provider: str = "voyage"

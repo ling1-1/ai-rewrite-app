@@ -195,7 +195,7 @@ textarea {
 
 .app-workspace-layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
@@ -249,6 +249,7 @@ textarea {
 
 .feature-nav-item strong {
   font-size: 1rem;
+  margin: 0;
 }
 
 .feature-nav-item span,
@@ -278,8 +279,61 @@ textarea {
   gap: 18px;
 }
 
+.defense-page-panel {
+  padding: 26px;
+}
+
+.defense-heading h1 {
+  max-width: 980px;
+  font-size: clamp(2.2rem, 3vw, 3.4rem);
+}
+
+.defense-hero-strip {
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.defense-hero-item {
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  gap: 8px;
+}
+
+.defense-hero-item strong {
+  font-size: 1rem;
+}
+
+.defense-hero-item span {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.defense-workbench {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.defense-control-panel,
+.defense-output-panel {
+  min-width: 0;
+}
+
+.defense-output-panel {
+  display: grid;
+  gap: 18px;
+}
+
 .defense-input-card {
   min-width: 0;
+  min-height: 0;
 }
 
 .defense-brief {
@@ -298,6 +352,133 @@ textarea {
 
 .defense-actions {
   flex-wrap: wrap;
+}
+
+.defense-thesis-box {
+  min-height: 420px;
+}
+
+.defense-preview-card {
+  min-height: 0;
+}
+
+.defense-section-header {
+  align-items: flex-start;
+}
+
+.defense-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-toggle {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(23, 32, 51, 0.06);
+}
+
+.view-toggle-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.view-toggle-btn.is-active {
+  background: white;
+  color: var(--text);
+  box-shadow: 0 8px 18px rgba(23, 32, 51, 0.08);
+}
+
+.ppt-preview-board,
+.speech-reading-board {
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(248, 246, 241, 0.98), rgba(255, 255, 255, 0.95));
+  padding: 18px;
+}
+
+.ppt-slide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ppt-slide-card {
+  min-height: 180px;
+  padding: 18px;
+  border-radius: 22px;
+  background: white;
+  border: 1px solid rgba(77, 91, 255, 0.12);
+  box-shadow: 0 16px 28px rgba(77, 91, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ppt-slide-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.ppt-slide-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.ppt-slide-index {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(77, 91, 255, 0.12);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.defense-empty-state {
+  min-height: 180px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 8px;
+}
+
+.defense-empty-state strong {
+  font-size: 1rem;
+}
+
+.defense-empty-state p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.defense-edit-box {
+  min-height: 340px;
+}
+
+.speech-reading-content {
+  display: grid;
+  gap: 14px;
+}
+
+.speech-paragraph {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: white;
+  border: 1px solid rgba(23, 32, 51, 0.08);
+  line-height: 1.9;
 }
 
 .workspace-grid {
@@ -414,6 +595,12 @@ textarea {
   cursor: pointer;
 }
 
+.history-item strong {
+  min-width: 0;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
 .history-item.is-active {
   border-color: rgba(77, 91, 255, 0.28);
   box-shadow: 0 20px 36px rgba(77, 91, 255, 0.12);
@@ -445,6 +632,12 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .defense-workbench,
+  .defense-hero-strip,
+  .ppt-slide-grid {
+    grid-template-columns: 1fr;
+  }
+
   .feature-sidebar {
     position: static;
   }
@@ -460,6 +653,12 @@ textarea {
   .editor-header,
   .history-header,
   .editor-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .defense-toolbar {
+    width: 100%;
     flex-direction: column;
     align-items: flex-start;
   }

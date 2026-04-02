@@ -42,9 +42,9 @@ class ConfigService:
 
     def _serialize_value(self, key: str, value: Any) -> Any:
         """按配置项语义存储原生类型，兼容 PostgreSQL JSONB。"""
-        if key == 'rag_top_k':
+        if key in {'rag_top_k', 'defense_max_tokens'}:
             return int(value)
-        if key == 'rag_similarity_threshold':
+        if key in {'rag_similarity_threshold', 'defense_temperature'}:
             return float(value)
         if key == 'enable_registration':
             if isinstance(value, bool):
@@ -95,7 +95,10 @@ class ConfigService:
         """获取模型配置"""
         return {
             'rewrite_model': self.get('rewrite_model', ''),
-            'defense_model': self.get('defense_model', '')
+            'defense_model': self.get('defense_model', ''),
+            'defense_base_url': self.get('defense_base_url', ''),
+            'defense_max_tokens': self.get('defense_max_tokens', None),
+            'defense_temperature': self.get('defense_temperature', None),
         }
 
     def get_rewrite_model(self, default_model: str) -> str:
@@ -103,6 +106,17 @@ class ConfigService:
 
     def get_defense_model(self, default_model: str) -> str:
         return self.get('defense_model', default_model) or default_model
+
+    def get_defense_base_url(self, default_base_url: str) -> str:
+        return self.get('defense_base_url', default_base_url) or default_base_url
+
+    def get_defense_max_tokens(self, default_max_tokens: int) -> int:
+        value = self.get('defense_max_tokens', default_max_tokens)
+        return int(value or default_max_tokens)
+
+    def get_defense_temperature(self, default_temperature: float) -> float:
+        value = self.get('defense_temperature', default_temperature)
+        return float(value or default_temperature)
     
     def is_registration_enabled(self) -> bool:
         """检查是否允许注册"""
