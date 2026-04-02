@@ -77,79 +77,197 @@
           </section>
 
           <section class="settings-section">
+            <h2>🎤 答辩辅助提示词</h2>
+            <div class="form-group">
+              <label for="defenseSystemPrompt">
+                答辩辅助系统提示词
+                <span class="hint">控制答辩辅助整体口吻、身份和输出边界。</span>
+              </label>
+              <textarea
+                id="defenseSystemPrompt"
+                v-model="config.defense_system_prompt"
+                rows="8"
+                class="form-textarea"
+                placeholder="请输入答辩辅助系统提示词..."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="defensePptPrompt">
+                答辩 PPT 提示词
+                <span class="hint">用于生成答辩 PPT 文字内容，支持变量 {thesis_text}。</span>
+              </label>
+              <textarea
+                id="defensePptPrompt"
+                v-model="config.defense_ppt_prompt"
+                rows="12"
+                class="form-textarea"
+                placeholder="请输入答辩PPT提示词..."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="defenseSpeechPrompt">
+                答辩稿提示词
+                <span class="hint">用于生成 3-4 分钟答辩稿，支持变量 {thesis_text} 和 {ppt_content}。</span>
+              </label>
+              <textarea
+                id="defenseSpeechPrompt"
+                v-model="config.defense_speech_prompt"
+                rows="12"
+                class="form-textarea"
+                placeholder="请输入答辩稿提示词..."
+              ></textarea>
+            </div>
+
+            <button @click="saveDefensePrompt" class="btn btn-primary">保存答辩提示词</button>
+          </section>
+
+          <section class="settings-section">
             <h2>🤖 模型配置</h2>
-            <div class="form-group">
-              <label for="rewriteModel">
-                降重大模型
-                <span class="hint">用于论文降重、改写和 RAG 主流程，建议使用更强一点的模型。</span>
-              </label>
-              <input
-                id="rewriteModel"
-                v-model="config.rewrite_model"
-                type="text"
-                class="form-input"
-                placeholder="例如：doubao-pro-32k"
-              />
-            </div>
+            <div class="model-config-grid">
+              <div class="model-config-card">
+                <h3>降重模型</h3>
+                <div class="form-group">
+                  <label for="rewriteApiKey">
+                    API Key
+                    <span class="hint">用于论文降重、改写和 RAG 主流程。</span>
+                  </label>
+                  <el-input
+                    id="rewriteApiKey"
+                    v-model="config.rewrite_api_key"
+                    type="password"
+                    show-password
+                    placeholder="请输入降重模型 API Key"
+                  />
+                </div>
 
-            <div class="form-group">
-              <label for="defenseModel">
-                答辩辅助模型
-                <span class="hint">用于生成答辩PPT文字和答辩稿，一般模型即可，和降重模型分开配置。</span>
-              </label>
-              <input
-                id="defenseModel"
-                v-model="config.defense_model"
-                type="text"
-                class="form-input"
-                placeholder="例如：doubao-lite-4k"
-              />
-            </div>
+                <div class="form-group">
+                  <label for="rewriteModel">
+                    模型名称
+                    <span class="hint">建议使用更强一点的模型。</span>
+                  </label>
+                  <input
+                    id="rewriteModel"
+                    v-model="config.rewrite_model"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：claude-sonnet-4-20250514"
+                  />
+                </div>
 
-            <div class="form-group">
-              <label for="defenseBaseUrl">
-                答辩模型 Base URL
-                <span class="hint">答辩辅助链路可单独走另一家模型服务，例如火山方舟。API Key 仍建议通过环境变量 DEFENSE_API_KEY 配置。</span>
-              </label>
-              <input
-                id="defenseBaseUrl"
-                v-model="config.defense_base_url"
-                type="text"
-                class="form-input"
-                placeholder="例如：https://ark.cn-beijing.volces.com/api/v3"
-              />
-            </div>
+                <div class="form-group">
+                  <label for="rewriteBaseUrl">
+                    Base URL
+                    <span class="hint">可切换不同模型服务商的接口地址。</span>
+                  </label>
+                  <input
+                    id="rewriteBaseUrl"
+                    v-model="config.rewrite_base_url"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：https://api.anthropic.com"
+                  />
+                </div>
 
-            <div class="model-grid">
-              <div class="form-group">
-                <label for="defenseMaxTokens">
-                  答辩最大输出长度
-                  <span class="hint">控制答辩PPT和稿子的输出长度上限。</span>
-                </label>
-                <input
-                  id="defenseMaxTokens"
-                  v-model.number="config.defense_max_tokens"
-                  type="number"
-                  min="256"
-                  max="8192"
-                  class="form-input"
-                />
+                <div class="model-grid">
+                  <div class="form-group">
+                    <label for="rewriteMaxTokens">最大输出长度</label>
+                    <input
+                      id="rewriteMaxTokens"
+                      v-model.number="config.rewrite_max_tokens"
+                      type="number"
+                      min="256"
+                      max="16384"
+                      class="form-input"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="rewriteTemperature">温度</label>
+                    <input
+                      id="rewriteTemperature"
+                      v-model.number="config.rewrite_temperature"
+                      type="number"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      class="form-input"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div class="form-group">
-                <label for="defenseTemperature">
-                  答辩温度
-                  <span class="hint">建议保持较低，保证表达更稳。</span>
-                </label>
-                <input
-                  id="defenseTemperature"
-                  v-model.number="config.defense_temperature"
-                  type="number"
-                  min="0"
-                  max="2"
-                  step="0.1"
-                  class="form-input"
-                />
+              <div class="model-config-card">
+                <h3>答辩辅助模型</h3>
+                <div class="form-group">
+                  <label for="defenseApiKey">
+                    API Key
+                    <span class="hint">可单独配置成火山、豆包等模型服务。</span>
+                  </label>
+                  <el-input
+                    id="defenseApiKey"
+                    v-model="config.defense_api_key"
+                    type="password"
+                    show-password
+                    placeholder="请输入答辩模型 API Key"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="defenseModel">
+                    模型名称
+                    <span class="hint">用于生成答辩PPT文字和答辩稿。</span>
+                  </label>
+                  <input
+                    id="defenseModel"
+                    v-model="config.defense_model"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：doubao-lite-4k-241215"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="defenseBaseUrl">
+                    Base URL
+                    <span class="hint">答辩辅助可独立走另一家模型服务。</span>
+                  </label>
+                  <input
+                    id="defenseBaseUrl"
+                    v-model="config.defense_base_url"
+                    type="text"
+                    class="form-input"
+                    placeholder="例如：https://ark.cn-beijing.volces.com/api/v3"
+                  />
+                </div>
+
+                <div class="model-grid">
+                  <div class="form-group">
+                    <label for="defenseMaxTokens">最大输出长度</label>
+                    <input
+                      id="defenseMaxTokens"
+                      v-model.number="config.defense_max_tokens"
+                      type="number"
+                      min="256"
+                      max="8192"
+                      class="form-input"
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label for="defenseTemperature">温度</label>
+                    <input
+                      id="defenseTemperature"
+                      v-model.number="config.defense_temperature"
+                      type="number"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      class="form-input"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -373,7 +491,15 @@ const config = ref({
   top_k: 3,
   similarity_threshold: 0.7,
   system_prompt: "",
+  defense_system_prompt: "",
+  defense_ppt_prompt: "",
+  defense_speech_prompt: "",
+  rewrite_api_key: "",
   rewrite_model: "",
+  rewrite_base_url: "",
+  rewrite_max_tokens: 4096,
+  rewrite_temperature: 0.7,
+  defense_api_key: "",
   defense_model: "",
   defense_base_url: "",
   defense_max_tokens: 2048,
@@ -479,9 +605,10 @@ async function requestApi(method, path, payload) {
 }
 
 async function loadConfigs() {
-  const [ragData, promptData, modelData, flagsData] = await Promise.all([
+  const [ragData, promptData, defensePromptData, modelData, flagsData] = await Promise.all([
     requestApi("GET", "/admin/config/rag/config"),
     requestApi("GET", "/admin/config/prompt/system"),
+    requestApi("GET", "/admin/config/prompt/defense"),
     requestApi("GET", "/admin/config/model/config"),
     requestApi("GET", "/admin/config/flags"),
   ]);
@@ -490,7 +617,15 @@ async function loadConfigs() {
     top_k: ragData.top_k,
     similarity_threshold: ragData.similarity_threshold,
     system_prompt: promptData.prompt,
+    defense_system_prompt: defensePromptData.system_prompt,
+    defense_ppt_prompt: defensePromptData.ppt_prompt,
+    defense_speech_prompt: defensePromptData.speech_prompt,
+    rewrite_api_key: modelData.rewrite_api_key,
     rewrite_model: modelData.rewrite_model,
+    rewrite_base_url: modelData.rewrite_base_url,
+    rewrite_max_tokens: modelData.rewrite_max_tokens,
+    rewrite_temperature: modelData.rewrite_temperature,
+    defense_api_key: modelData.defense_api_key,
     defense_model: modelData.defense_model,
     defense_base_url: modelData.defense_base_url,
     defense_max_tokens: modelData.defense_max_tokens,
@@ -572,10 +707,28 @@ async function saveSystemPrompt() {
   }
 }
 
+async function saveDefensePrompt() {
+  try {
+    await requestApi("PUT", "/admin/config/prompt/defense", {
+      system_prompt: config.value.defense_system_prompt,
+      ppt_prompt: config.value.defense_ppt_prompt,
+      speech_prompt: config.value.defense_speech_prompt,
+    });
+    ElMessage.success("答辩提示词已保存");
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "保存失败"));
+  }
+}
+
 async function saveModelConfig() {
   try {
     await requestApi("PUT", "/admin/config/model/config", {
+      rewrite_api_key: config.value.rewrite_api_key,
       rewrite_model: config.value.rewrite_model,
+      rewrite_base_url: config.value.rewrite_base_url,
+      rewrite_max_tokens: config.value.rewrite_max_tokens,
+      rewrite_temperature: config.value.rewrite_temperature,
+      defense_api_key: config.value.defense_api_key,
       defense_model: config.value.defense_model,
       defense_base_url: config.value.defense_base_url,
       defense_max_tokens: config.value.defense_max_tokens,
@@ -853,6 +1006,26 @@ onMounted(initializePage);
   margin-bottom: 1.5rem;
 }
 
+.model-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.model-config-card {
+  padding: 1.25rem;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fafcff;
+}
+
+.model-config-card h3 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  color: #111827;
+}
+
 .model-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -892,6 +1065,13 @@ onMounted(initializePage);
   font-size: 0.9rem;
   color: #666;
   margin-top: 0.25rem;
+}
+
+@media (max-width: 900px) {
+  .model-config-grid,
+  .model-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .toolbar {

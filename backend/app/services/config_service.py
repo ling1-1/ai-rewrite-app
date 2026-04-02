@@ -27,9 +27,11 @@ class ConfigService:
             return default
         
         # 根据 key 类型转换
-        if key in ['rag_top_k']:
+        if key in ['rag_top_k', 'rewrite_max_tokens', 'defense_max_tokens']:
             return int(config.value)
         elif key in ['rag_similarity_threshold']:
+            return float(config.value)
+        elif key in ['rewrite_temperature', 'defense_temperature']:
             return float(config.value)
         elif key in ['enable_registration']:
             if isinstance(config.value, bool):
@@ -42,9 +44,9 @@ class ConfigService:
 
     def _serialize_value(self, key: str, value: Any) -> Any:
         """按配置项语义存储原生类型，兼容 PostgreSQL JSONB。"""
-        if key in {'rag_top_k', 'defense_max_tokens'}:
+        if key in {'rag_top_k', 'rewrite_max_tokens', 'defense_max_tokens'}:
             return int(value)
-        if key in {'rag_similarity_threshold', 'defense_temperature'}:
+        if key in {'rag_similarity_threshold', 'rewrite_temperature', 'defense_temperature'}:
             return float(value)
         if key == 'enable_registration':
             if isinstance(value, bool):
@@ -91,18 +93,49 @@ class ConfigService:
         """获取系统提示词"""
         return self.get('system_prompt', '')
 
+    def get_defense_system_prompt(self) -> str:
+        return self.get('defense_system_prompt', '')
+
+    def get_defense_ppt_prompt(self) -> str:
+        return self.get('defense_ppt_prompt', '')
+
+    def get_defense_speech_prompt(self) -> str:
+        return self.get('defense_speech_prompt', '')
+
     def get_model_config(self) -> dict:
         """获取模型配置"""
         return {
+            'rewrite_api_key': self.get('rewrite_api_key', ''),
             'rewrite_model': self.get('rewrite_model', ''),
+            'rewrite_base_url': self.get('rewrite_base_url', ''),
+            'rewrite_max_tokens': self.get('rewrite_max_tokens', None),
+            'rewrite_temperature': self.get('rewrite_temperature', None),
+            'defense_api_key': self.get('defense_api_key', ''),
             'defense_model': self.get('defense_model', ''),
             'defense_base_url': self.get('defense_base_url', ''),
             'defense_max_tokens': self.get('defense_max_tokens', None),
             'defense_temperature': self.get('defense_temperature', None),
         }
 
+    def get_rewrite_api_key(self, default_api_key: str) -> str:
+        return self.get('rewrite_api_key', default_api_key) or default_api_key
+
     def get_rewrite_model(self, default_model: str) -> str:
         return self.get('rewrite_model', default_model) or default_model
+
+    def get_rewrite_base_url(self, default_base_url: str) -> str:
+        return self.get('rewrite_base_url', default_base_url) or default_base_url
+
+    def get_rewrite_max_tokens(self, default_max_tokens: int) -> int:
+        value = self.get('rewrite_max_tokens', default_max_tokens)
+        return int(value or default_max_tokens)
+
+    def get_rewrite_temperature(self, default_temperature: float) -> float:
+        value = self.get('rewrite_temperature', default_temperature)
+        return float(value or default_temperature)
+
+    def get_defense_api_key(self, default_api_key: str) -> str:
+        return self.get('defense_api_key', default_api_key) or default_api_key
 
     def get_defense_model(self, default_model: str) -> str:
         return self.get('defense_model', default_model) or default_model

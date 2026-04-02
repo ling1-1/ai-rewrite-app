@@ -21,9 +21,7 @@ DEFENSE_SYSTEM_PROMPT = """
 5. 输出内容必须方便直接粘贴到 PPT 或答辩稿中。
 """.strip()
 
-
-def generate_defense_ppt(thesis_text: str, db: Optional[Session] = None) -> str:
-    prompt = f"""
+DEFENSE_PPT_PROMPT_TEMPLATE = """
 请根据下面这篇论文内容，直接生成一份“答辩PPT文字版”，要求如下：
 
 1. 内容一定要精炼、直观、清晰，抓住重点。
@@ -41,11 +39,7 @@ def generate_defense_ppt(thesis_text: str, db: Optional[Session] = None) -> str:
 {thesis_text}
 """.strip()
 
-    return _call_chat_model(prompt, db=db)
-
-
-def generate_defense_speech(thesis_text: str, ppt_content: str, db: Optional[Session] = None) -> str:
-    prompt = f"""
+DEFENSE_SPEECH_PROMPT_TEMPLATE = """
 请根据下面的论文内容和答辩PPT内容，生成一份适合 3 到 4 分钟中文本科毕业答辩的答辩稿，要求如下：
 
 1. 内容一定要精炼、直观、清晰，讲重点。
@@ -61,6 +55,37 @@ def generate_defense_speech(thesis_text: str, ppt_content: str, db: Optional[Ses
 答辩PPT内容：
 {ppt_content}
 """.strip()
+
+
+def generate_defense_ppt(thesis_text: str, db: Optional[Session] = None) -> str:
+    prompt_template = DEFENSE_PPT_PROMPT_TEMPLATE
+    if db:
+        try:
+            from app.services.config_service import ConfigService
+            config_service = ConfigService(db)
+            prompt_template = config_service.get_defense_ppt_prompt() or DEFENSE_PPT_PROMPT_TEMPLATE
+        except Exception as exc:
+            print(f"⚠️ 获取答辩PPT提示词失败：{exc}")
+
+    prompt = prompt_template.format(thesis_text=thesis_text)
+
+    return _call_chat_model(prompt, db=db)
+
+
+def generate_defense_speech(thesis_text: str, ppt_content: str, db: Optional[Session] = None) -> str:
+    prompt_template = DEFENSE_SPEECH_PROMPT_TEMPLATE
+    if db:
+        try:
+            from app.services.config_service import ConfigService
+            config_service = ConfigService(db)
+            prompt_template = config_service.get_defense_speech_prompt() or DEFENSE_SPEECH_PROMPT_TEMPLATE
+        except Exception as exc:
+            print(f"⚠️ 获取答辩稿提示词失败：{exc}")
+
+    prompt = prompt_template.format(
+        thesis_text=thesis_text,
+        ppt_content=ppt_content,
+    )
 
     return _call_chat_model(prompt, db=db)
 
@@ -80,14 +105,17 @@ def _call_chat_model(user_prompt: str, db: Optional[Session] = None) -> str:
     base_url = (settings.defense_base_url or settings.anthropic_base_url).rstrip("/")
     max_tokens = settings.defense_max_tokens
     temperature = settings.defense_temperature
+    system_prompt = DEFENSE_SYSTEM_PROMPT
     if db:
         try:
             from app.services.config_service import ConfigService
             config_service = ConfigService(db)
+            api_key = config_service.get_defense_api_key(api_key)
             model_name = config_service.get_defense_model(model_name)
             base_url = config_service.get_defense_base_url(base_url).rstrip("/")
             max_tokens = config_service.get_defense_max_tokens(max_tokens)
             temperature = config_service.get_defense_temperature(temperature)
+            system_prompt = config_service.get_defense_system_prompt() or DEFENSE_SYSTEM_PROMPT
         except Exception as exc:
             print(f"⚠️ 获取答辩模型配置失败：{exc}")
 
@@ -101,7 +129,7 @@ def _call_chat_model(user_prompt: str, db: Optional[Session] = None) -> str:
         "max_tokens": max_tokens,
         "temperature": temperature,
         "messages": [
-            {"role": "system", "content": DEFENSE_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
     }

@@ -51,13 +51,30 @@ class SystemPromptUpdateRequest(BaseModel):
     prompt: str
 
 
+class DefensePromptResponse(BaseModel):
+    system_prompt: str
+    ppt_prompt: str
+    speech_prompt: str
+
+
+class DefensePromptUpdateRequest(BaseModel):
+    system_prompt: Optional[str] = None
+    ppt_prompt: Optional[str] = None
+    speech_prompt: Optional[str] = None
+
+
 class FeatureFlagsResponse(BaseModel):
     """功能开关响应"""
     enable_registration: bool
 
 
 class ModelConfigResponse(BaseModel):
+    rewrite_api_key: str
     rewrite_model: str
+    rewrite_base_url: str
+    rewrite_max_tokens: int
+    rewrite_temperature: float
+    defense_api_key: str
     defense_model: str
     defense_base_url: str
     defense_max_tokens: int
@@ -65,7 +82,12 @@ class ModelConfigResponse(BaseModel):
 
 
 class ModelConfigUpdateRequest(BaseModel):
+    rewrite_api_key: Optional[str] = None
     rewrite_model: Optional[str] = None
+    rewrite_base_url: Optional[str] = None
+    rewrite_max_tokens: Optional[int] = None
+    rewrite_temperature: Optional[float] = None
+    defense_api_key: Optional[str] = None
     defense_model: Optional[str] = None
     defense_base_url: Optional[str] = None
     defense_max_tokens: Optional[int] = None
@@ -137,6 +159,52 @@ def update_system_prompt(
     return {"prompt": request.prompt}
 
 
+@router.get("/prompt/defense", response_model=DefensePromptResponse, summary="获取答辩辅助提示词", tags=["admin"])
+def get_defense_prompt(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+    from app.services.defense import (
+        DEFENSE_SYSTEM_PROMPT,
+        DEFENSE_PPT_PROMPT_TEMPLATE,
+        DEFENSE_SPEECH_PROMPT_TEMPLATE,
+    )
+
+    return {
+        "system_prompt": config_service.get_defense_system_prompt() or DEFENSE_SYSTEM_PROMPT,
+        "ppt_prompt": config_service.get_defense_ppt_prompt() or DEFENSE_PPT_PROMPT_TEMPLATE,
+        "speech_prompt": config_service.get_defense_speech_prompt() or DEFENSE_SPEECH_PROMPT_TEMPLATE,
+    }
+
+
+@router.put("/prompt/defense", response_model=DefensePromptResponse, summary="更新答辩辅助提示词", tags=["admin"])
+def update_defense_prompt(
+    request: DefensePromptUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+    from app.services.defense import (
+        DEFENSE_SYSTEM_PROMPT,
+        DEFENSE_PPT_PROMPT_TEMPLATE,
+        DEFENSE_SPEECH_PROMPT_TEMPLATE,
+    )
+
+    if request.system_prompt is not None:
+        config_service.set("defense_system_prompt", request.system_prompt)
+    if request.ppt_prompt is not None:
+        config_service.set("defense_ppt_prompt", request.ppt_prompt)
+    if request.speech_prompt is not None:
+        config_service.set("defense_speech_prompt", request.speech_prompt)
+
+    return {
+        "system_prompt": config_service.get_defense_system_prompt() or DEFENSE_SYSTEM_PROMPT,
+        "ppt_prompt": config_service.get_defense_ppt_prompt() or DEFENSE_PPT_PROMPT_TEMPLATE,
+        "speech_prompt": config_service.get_defense_speech_prompt() or DEFENSE_SPEECH_PROMPT_TEMPLATE,
+    }
+
+
 @router.get("/flags", response_model=FeatureFlagsResponse, summary="获取功能开关", tags=["admin"])
 def get_feature_flags(
     db: Session = Depends(get_db),
@@ -168,7 +236,12 @@ def get_model_config(
 ):
     config_service = ConfigService(db)
     return {
+        "rewrite_api_key": config_service.get_rewrite_api_key(settings.anthropic_api_key),
         "rewrite_model": config_service.get_rewrite_model(settings.anthropic_model),
+        "rewrite_base_url": config_service.get_rewrite_base_url(settings.anthropic_base_url),
+        "rewrite_max_tokens": config_service.get_rewrite_max_tokens(settings.anthropic_max_tokens),
+        "rewrite_temperature": config_service.get_rewrite_temperature(settings.anthropic_temperature),
+        "defense_api_key": config_service.get_defense_api_key(settings.defense_api_key or settings.anthropic_api_key),
         "defense_model": config_service.get_defense_model(settings.defense_model),
         "defense_base_url": config_service.get_defense_base_url(settings.defense_base_url or settings.anthropic_base_url),
         "defense_max_tokens": config_service.get_defense_max_tokens(settings.defense_max_tokens),
@@ -184,8 +257,27 @@ def update_model_config(
 ):
     config_service = ConfigService(db)
 
+    if request.rewrite_api_key is not None:
+        config_service.set("rewrite_api_key", request.rewrite_api_key.strip())
+
     if request.rewrite_model is not None:
         config_service.set("rewrite_model", request.rewrite_model.strip())
+
+    if request.rewrite_base_url is not None:
+        config_service.set("rewrite_base_url", request.rewrite_base_url.strip())
+
+    if request.rewrite_max_tokens is not None:
+        if not (256 <= request.rewrite_max_tokens <= 16384):
+            raise HTTPException(400, "rewrite_max_tokens 必须在 256-16384 之间")
+        config_service.set("rewrite_max_tokens", request.rewrite_max_tokens)
+
+    if request.rewrite_temperature is not None:
+        if not (0 <= request.rewrite_temperature <= 2):
+            raise HTTPException(400, "rewrite_temperature 必须在 0-2 之间")
+        config_service.set("rewrite_temperature", request.rewrite_temperature)
+
+    if request.defense_api_key is not None:
+        config_service.set("defense_api_key", request.defense_api_key.strip())
 
     if request.defense_model is not None:
         config_service.set("defense_model", request.defense_model.strip())
@@ -204,7 +296,12 @@ def update_model_config(
         config_service.set("defense_temperature", request.defense_temperature)
 
     return {
+        "rewrite_api_key": config_service.get_rewrite_api_key(settings.anthropic_api_key),
         "rewrite_model": config_service.get_rewrite_model(settings.anthropic_model),
+        "rewrite_base_url": config_service.get_rewrite_base_url(settings.anthropic_base_url),
+        "rewrite_max_tokens": config_service.get_rewrite_max_tokens(settings.anthropic_max_tokens),
+        "rewrite_temperature": config_service.get_rewrite_temperature(settings.anthropic_temperature),
+        "defense_api_key": config_service.get_defense_api_key(settings.defense_api_key or settings.anthropic_api_key),
         "defense_model": config_service.get_defense_model(settings.defense_model),
         "defense_base_url": config_service.get_defense_base_url(settings.defense_base_url or settings.anthropic_base_url),
         "defense_max_tokens": config_service.get_defense_max_tokens(settings.defense_max_tokens),

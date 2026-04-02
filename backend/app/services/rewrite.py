@@ -68,13 +68,21 @@ def rewrite_text(
     """
     # 1. 获取系统提示词（从数据库配置）
     system_prompt = DEFAULT_SYSTEM_PROMPT
+    api_key = settings.anthropic_api_key
     model_name = settings.anthropic_model
+    base_url = settings.anthropic_base_url.rstrip('/')
+    max_tokens = settings.anthropic_max_tokens
+    temperature = settings.anthropic_temperature
     if db:
         try:
             from app.services.config_service import ConfigService
             config_service = ConfigService(db)
             system_prompt = config_service.get_system_prompt() or DEFAULT_SYSTEM_PROMPT
+            api_key = config_service.get_rewrite_api_key(settings.anthropic_api_key)
             model_name = config_service.get_rewrite_model(settings.anthropic_model)
+            base_url = config_service.get_rewrite_base_url(settings.anthropic_base_url).rstrip('/')
+            max_tokens = config_service.get_rewrite_max_tokens(settings.anthropic_max_tokens)
+            temperature = config_service.get_rewrite_temperature(settings.anthropic_temperature)
         except Exception as e:
             print(f"⚠️  获取系统提示词失败：{e}")
     
@@ -124,11 +132,10 @@ def rewrite_text(
             pass
     
     # 3. 调用 Chat API
-    if not settings.anthropic_api_key:
+    if not api_key:
         raise RewriteServiceError("尚未配置 API Key")
 
     # 构建正确的 URL（避免重复 /v1）
-    base_url = settings.anthropic_base_url.rstrip('/')
     if base_url.endswith('/v3'):
         url = f"{base_url}/chat/completions"
     else:
@@ -136,8 +143,8 @@ def rewrite_text(
     
     payload = {
         "model": model_name,
-        "max_tokens": settings.anthropic_max_tokens,
-        "temperature": settings.anthropic_temperature,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
         "messages": [
             {
                 "role": "system",
@@ -150,7 +157,7 @@ def rewrite_text(
         ],
     }
     headers = {
-        "Authorization": f"Bearer {settings.anthropic_api_key}",
+        "Authorization": f"Bearer {api_key}",
         "content-type": "application/json",
     }
 
