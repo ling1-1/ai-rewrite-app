@@ -54,16 +54,49 @@
                     <span class="muted">{{ thesisText.trim().length }} 字</span>
                   </div>
 
-                  <div class="defense-brief">
-                    <strong>建议输入内容</strong>
-                    <p>优先放摘要、研究背景、方法、结论和创新点。内容不需要特别完整，但至少要让模型能看清论文在研究什么、做出了什么结果。</p>
-                  </div>
+                <div class="defense-brief">
+                  <strong>建议输入内容</strong>
+                  <p>优先放摘要、研究背景、方法、结论和创新点。内容不需要特别完整，但至少要让模型能看清论文在研究什么、做出了什么结果。</p>
+                </div>
 
-                  <div class="editor-box defense-thesis-box">
-                    <textarea
-                      v-model="thesisText"
-                      placeholder="把论文正文、摘要、结论或核心章节粘贴到这里。内容越完整，生成的 PPT 和稿子越稳。"
-                    />
+                <div class="upload-toolbar defense-upload-toolbar">
+                  <input
+                    ref="fileInput"
+                    class="file-input"
+                    type="file"
+                    accept=".txt,.md,.pdf,.docx"
+                    @change="handleFileChange"
+                  />
+                  <div>
+                    <strong>支持上传 .txt / .md / .pdf / .docx</strong>
+                    <div class="muted">
+                      {{ uploadedFileName ? `当前文件：${uploadedFileName}` : "上传后会自动提取正文到论文内容中。" }}
+                    </div>
+                  </div>
+                  <div class="defense-upload-actions">
+                    <el-button size="large" :loading="uploading" @click="openFilePicker">
+                      {{ uploading ? "解析中..." : uploadedFileName ? "替换文件" : "上传论文" }}
+                    </el-button>
+                    <el-button
+                      v-if="uploadedFileName"
+                      size="large"
+                      @click="clearUploadedFile"
+                    >
+                      清空文件
+                    </el-button>
+                  </div>
+                </div>
+
+                <div v-if="uploadedFileName || thesisText.trim()" class="defense-file-meta">
+                  <span v-if="uploadedFileName">文件：{{ uploadedFileName }}</span>
+                  <span>正文长度：{{ thesisText.trim().length }} 字</span>
+                </div>
+
+                <div class="editor-box defense-thesis-box">
+                  <textarea
+                    v-model="thesisText"
+                    placeholder="把论文正文、摘要、结论或核心章节粘贴到这里。内容越完整，生成的 PPT 和稿子越稳。"
+                  />
                   </div>
 
                   <div class="editor-actions defense-actions">
@@ -194,10 +227,13 @@ const authStore = useAuthStore();
 const thesisText = ref("");
 const pptContent = ref("");
 const speechContent = ref("");
+const uploadedFileName = ref("");
+const uploading = ref(false);
 const pptLoading = ref(false);
 const speechLoading = ref(false);
 const flowLoading = ref(false);
 const pptViewMode = ref("preview");
+const fileInput = ref(null);
 
 const fallbackSectionTitles = [
   "研究背景、目的与意义",
@@ -327,11 +363,46 @@ async function generateFullFlow() {
   }
 }
 
+function openFilePicker() {
+  fileInput.value?.click();
+}
+
+async function handleFileChange(event) {
+  const file = event.target.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  uploading.value = true;
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const { data } = await http.post("/rewrite/extract-file", formData);
+    thesisText.value = data.source_text;
+    uploadedFileName.value = data.filename;
+    ElMessage.success(`已导入 ${data.filename}`);
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "论文文件解析失败"));
+  } finally {
+    uploading.value = false;
+    event.target.value = "";
+  }
+}
+
 function handleClear() {
   thesisText.value = "";
   pptContent.value = "";
   speechContent.value = "";
   pptViewMode.value = "preview";
+  uploadedFileName.value = "";
+}
+
+function clearUploadedFile() {
+  uploadedFileName.value = "";
+  thesisText.value = "";
+  ElMessage.success("已清空上传内容");
 }
 
 async function copyText(content, label) {

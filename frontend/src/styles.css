@@ -364,6 +364,28 @@ textarea {
   line-height: 1.7;
 }
 
+.defense-upload-toolbar {
+  margin-top: 16px;
+  align-items: center;
+}
+
+.defense-upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.defense-file-meta {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
 .defense-actions {
   flex-wrap: wrap;
 }
@@ -676,6 +698,11 @@ textarea {
   .editor-header,
   .history-header,
   .editor-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .defense-upload-toolbar {
     flex-direction: column;
     align-items: flex-start;
   }
