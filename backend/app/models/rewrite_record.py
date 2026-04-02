@@ -62,3 +62,31 @@ class RewriteRecord(Base):
 
     user = relationship("User", back_populates="records")
 
+    @property
+    def is_in_vector_db(self) -> bool:
+        metadata = self.metadata_ or {}
+        return bool(metadata.get("vector_db_synced"))
+
+    @property
+    def vector_db_synced_at(self):
+        metadata = self.metadata_ or {}
+        return metadata.get("vector_db_synced_at")
+
+    @property
+    def vector_db_sync_count(self) -> int:
+        metadata = self.metadata_ or {}
+        count = metadata.get("vector_db_sync_count", 0)
+        try:
+            return int(count or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    @property
+    def history_status(self) -> str:
+        if self.is_in_vector_db and self.vector_db_sync_count > 1:
+            return "updated"
+        if self.is_in_vector_db:
+            return "synced"
+        if self.is_favorite:
+            return "favorite"
+        return "normal"

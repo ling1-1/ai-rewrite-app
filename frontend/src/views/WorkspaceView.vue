@@ -96,7 +96,7 @@
               <h2 class="panel-title">历史记录</h2>
             </div>
             <div class="history-header-actions">
-              <el-button text @click="syncFavoriteHistory">同步收藏</el-button>
+              <el-button text @click="syncFavoriteHistory">批量入库</el-button>
               <el-button text @click="loadHistory">刷新</el-button>
             </div>
           </div>
@@ -106,13 +106,20 @@
               v-for="item in history"
               :key="item.id"
               class="history-item"
-              :class="{ 'is-active': activeId === item.id, 'is-favorite': item.is_favorite }"
+              :class="{
+                'is-active': activeId === item.id,
+                'is-favorite': item.is_favorite,
+                'is-synced': item.is_in_vector_db,
+                'is-updated': item.history_status === 'updated'
+              }"
               @click="applyHistory(item)"
             >
               <div class="history-item-head">
                 <div class="history-item-title">
                   <strong>{{ item.name || formatDate(item.created_at) }}</strong>
-                  <span v-if="item.is_favorite" class="favorite-badge">★ 已收藏</span>
+                  <span v-if="item.history_status === 'updated'" class="updated-badge">已更新入库</span>
+                  <span v-else-if="item.is_in_vector_db" class="synced-badge">已入库</span>
+                  <span v-else-if="item.is_favorite" class="favorite-badge">待入库</span>
                 </div>
                 <div class="history-item-actions" @click.stop>
                   <el-button
@@ -122,7 +129,7 @@
                     type="success"
                     @click="handleSyncToVectorDb(item)"
                   >
-                    入库
+                    {{ item.is_in_vector_db ? "更新入库" : "入库" }}
                   </el-button>
                   <el-button text size="small" @click="openEditDialog(item)">
                     编辑
@@ -134,7 +141,15 @@
               </div>
               <div class="history-text">{{ item.source_text }}</div>
               <div class="history-meta">
-                {{ item.is_favorite ? "已收藏，点击可回填原文与结果" : "点击可回填原文与结果" }}
+                {{
+                  item.history_status === 'updated'
+                    ? `已更新入库${item.vector_db_sync_count ? ` · 第 ${item.vector_db_sync_count} 次` : ""}${item.vector_db_synced_at ? ` · ${formatDate(item.vector_db_synced_at)}` : ""}`
+                    : item.is_in_vector_db
+                      ? `已入库${item.vector_db_synced_at ? ` · ${formatDate(item.vector_db_synced_at)}` : ""}`
+                      : item.is_favorite
+                        ? "已标记成功，待入库"
+                        : "点击可回填原文与结果"
+                }}
               </div>
             </div>
           </div>
@@ -175,6 +190,14 @@ const editingRecord = ref(null);
 
 function sortHistoryItems(items) {
   return [...items].sort((a, b) => {
+    if ((a.history_status === "updated") !== (b.history_status === "updated")) {
+      return a.history_status === "updated" ? -1 : 1;
+    }
+
+    if (Boolean(a.is_in_vector_db) !== Boolean(b.is_in_vector_db)) {
+      return a.is_in_vector_db ? -1 : 1;
+    }
+
     if (Boolean(a.is_favorite) !== Boolean(b.is_favorite)) {
       return a.is_favorite ? -1 : 1;
     }
@@ -291,8 +314,9 @@ function handleHistoryUpdated(updatedRecord) {
 
 async function handleSyncToVectorDb(item) {
   try {
-    await http.post(`/rewrite/${item.id}/sync-to-vector-db`);
-    ElMessage.success("已同步到向量数据库");
+    const { data } = await http.post(`/rewrite/${item.id}/sync-to-vector-db`);
+    ElMessage.success(data.message || "已同步到向量数据库");
+    await loadHistory();
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "同步失败"));
   }
@@ -302,6 +326,7 @@ async function syncFavoriteHistory() {
   try {
     const { data } = await http.post("/rewrite/sync-to-vector-db?favorites_only=true");
     ElMessage.success(data.message || "同步完成");
+    await loadHistory();
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "同步失败"));
   }
@@ -390,6 +415,30 @@ onMounted(loadHistory);
   white-space: nowrap;
 }
 
+.synced-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.updated-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .history-item.is-favorite {
   border-color: rgba(245, 158, 11, 0.38);
   background: linear-gradient(135deg, rgba(255, 248, 235, 0.96), rgba(255, 255, 255, 0.92));
@@ -398,6 +447,28 @@ onMounted(loadHistory);
 
 .history-item.is-favorite .history-meta {
   color: #b45309;
+  font-weight: 600;
+}
+
+.history-item.is-synced {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.96), rgba(255, 255, 255, 0.92));
+  box-shadow: 0 16px 32px rgba(16, 185, 129, 0.12);
+}
+
+.history-item.is-synced .history-meta {
+  color: #047857;
+  font-weight: 600;
+}
+
+.history-item.is-updated {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.92));
+  box-shadow: 0 16px 32px rgba(59, 130, 246, 0.12);
+}
+
+.history-item.is-updated .history-meta {
+  color: #1d4ed8;
   font-weight: 600;
 }
 </style>

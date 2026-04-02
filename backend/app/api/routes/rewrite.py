@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from typing import List
@@ -50,6 +51,21 @@ def _sync_documents_to_vector_db(vector_db, documents: list[dict]) -> int:
         ):
             synced_count += 1
     return synced_count
+
+
+def _mark_record_synced(record: RewriteRecord) -> int:
+    metadata = record.metadata_ or {}
+    previous_count = int(metadata.get("vector_db_sync_count", 0) or 0)
+    sync_count = previous_count + 1
+    record.is_favorite = False
+    record.metadata_ = {
+        **metadata,
+        "vector_db_synced": True,
+        "vector_db_synced_at": datetime.utcnow().isoformat(),
+        "vector_db_point_id": record.id,
+        "vector_db_sync_count": sync_count,
+    }
+    return sync_count
 
 
 @router.post("", response_model=RewriteResponse)
@@ -123,7 +139,7 @@ def sync_to_vector_db(
         records = query.order_by(
             RewriteRecord.created_at.desc()
         ).limit(limit).all()
-        
+
         if not records:
             return {
                 "success": True,
@@ -137,9 +153,19 @@ def sync_to_vector_db(
         synced_count = _sync_documents_to_vector_db(vector_db, documents)
 
         if synced_count:
+            updated_count = 0
+            for record in records:
+                sync_count = _mark_record_synced(record)
+                if sync_count > 1:
+                    updated_count += 1
+            db.commit()
             return {
                 "success": True,
-                "message": f"成功同步 {synced_count} 条记录到向量数据库",
+                "message": (
+                    f"成功批量入库 {synced_count} 条记录"
+                    if not updated_count
+                    else f"成功批量入库 {synced_count} 条记录，其中 {updated_count} 条已更新入库"
+                ),
                 "synced_count": synced_count
             }
         else:
@@ -194,11 +220,15 @@ def sync_record_to_vector_db(
         )
         
         if success:
+            previous_count = record.vector_db_sync_count
+            sync_count = _mark_record_synced(record)
+            db.commit()
             print(f"✅ 成功写入向量数据库")
             return {
                 "success": True,
-                "message": "已成功写入向量数据库",
-                "record_id": record_id
+                "message": "已成功更新入库" if previous_count > 0 else "已成功入库",
+                "record_id": record_id,
+                "sync_count": sync_count,
             }
         else:
             print(f"⚠️ 向量数据库写入返回失败")

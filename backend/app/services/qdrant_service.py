@@ -119,13 +119,7 @@ class QdrantService:
         threshold: float = 0.7,
     ) -> List[Dict[str, Any]]:
         query_embedding = get_embedding(query_text, input_type="query")
-        results = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=query_embedding,
-            limit=limit,
-            score_threshold=threshold,
-            with_payload=True,
-        )
+        results = self._query_points(query_embedding, limit=limit, threshold=threshold)
 
         documents: List[Dict[str, Any]] = []
         for item in results:
@@ -141,6 +135,39 @@ class QdrantService:
                 }
             )
         return documents
+
+    def _query_points(
+        self,
+        query_embedding: List[float],
+        limit: int,
+        threshold: float,
+    ):
+        # 新版 qdrant-client 推荐接口
+        if hasattr(self.client, "query_points"):
+            response = self.client.query_points(
+                collection_name=self.collection_name,
+                query=query_embedding,
+                limit=limit,
+                score_threshold=threshold,
+                with_payload=True,
+            )
+            if hasattr(response, "points"):
+                return response.points
+            if isinstance(response, dict):
+                return response.get("points") or response.get("result", {}).get("points", [])
+            return response
+
+        # 旧版兼容
+        if hasattr(self.client, "search"):
+            return self.client.search(
+                collection_name=self.collection_name,
+                query_vector=query_embedding,
+                limit=limit,
+                score_threshold=threshold,
+                with_payload=True,
+            )
+
+        raise AttributeError("当前 qdrant-client 版本不支持 query_points/search")
 
     def delete(self, doc_id: str) -> bool:
         self.client.delete(

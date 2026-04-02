@@ -62,6 +62,10 @@ def serialize_history_record(record: RewriteRecord) -> dict:
         "result_text": record.result_text,
         "notes": record.notes,
         "is_favorite": record.is_favorite,
+        "is_in_vector_db": record.is_in_vector_db,
+        "vector_db_synced_at": record.vector_db_synced_at,
+        "vector_db_sync_count": record.vector_db_sync_count,
+        "history_status": record.history_status,
         "created_at": record.created_at,
         "updated_at": record.updated_at,
     }
