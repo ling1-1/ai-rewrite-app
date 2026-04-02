@@ -16,7 +16,7 @@ router = APIRouter()
 
 def _build_vector_doc(record: RewriteRecord, username: str) -> dict:
     return {
-        "id": f"rewrite_record_{record.id}",
+        "id": record.id,
         "original_text": record.source_text,
         "rewrite_text": record.result_text,
         "metadata": [username],
@@ -189,7 +189,7 @@ def sync_record_to_vector_db(
             record.source_text,
             record.result_text,
             [current_user.username],
-            doc_id=f"rewrite_record_{record.id}",
+            doc_id=record.id,
             extra_payload=_build_vector_doc(record, current_user.username)["payload"],
         )
         
