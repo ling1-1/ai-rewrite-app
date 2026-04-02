@@ -68,11 +68,13 @@ def rewrite_text(
     """
     # 1. 获取系统提示词（从数据库配置）
     system_prompt = DEFAULT_SYSTEM_PROMPT
+    model_name = settings.anthropic_model
     if db:
         try:
             from app.services.config_service import ConfigService
             config_service = ConfigService(db)
             system_prompt = config_service.get_system_prompt() or DEFAULT_SYSTEM_PROMPT
+            model_name = config_service.get_rewrite_model(settings.anthropic_model)
         except Exception as e:
             print(f"⚠️  获取系统提示词失败：{e}")
     
@@ -133,7 +135,7 @@ def rewrite_text(
         url = f"{base_url}/v1/chat/completions"
     
     payload = {
-        "model": settings.anthropic_model,
+        "model": model_name,
         "max_tokens": settings.anthropic_max_tokens,
         "temperature": settings.anthropic_temperature,
         "messages": [

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # Claude API 配置（火山方舟）
     anthropic_api_key: str = ""
     anthropic_model: str = "doubao-lite-4k-241215"
+    defense_model: str = "doubao-lite-4k-241215"
     anthropic_base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
     anthropic_max_tokens: int = 4096
     anthropic_temperature: float = 0.7

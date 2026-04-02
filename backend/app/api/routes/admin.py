@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any
 
 from app.api.deps import get_db
 from app.api.deps_admin import get_current_admin_user
+from app.core.config import settings
 from app.services.config_service import ConfigService
 from app.models.user import User
 
@@ -53,6 +54,16 @@ class SystemPromptUpdateRequest(BaseModel):
 class FeatureFlagsResponse(BaseModel):
     """功能开关响应"""
     enable_registration: bool
+
+
+class ModelConfigResponse(BaseModel):
+    rewrite_model: str
+    defense_model: str
+
+
+class ModelConfigUpdateRequest(BaseModel):
+    rewrite_model: Optional[str] = None
+    defense_model: Optional[str] = None
 
 
 @router.get("", summary="获取所有配置", tags=["admin"])
@@ -142,6 +153,38 @@ def update_registration_flag(
     config_service = ConfigService(db)
     config_service.set('enable_registration', str(enable).lower())
     return {"enable_registration": enable}
+
+
+@router.get("/model/config", response_model=ModelConfigResponse, summary="获取模型配置", tags=["admin"])
+def get_model_config(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+    return {
+        "rewrite_model": config_service.get_rewrite_model(settings.anthropic_model),
+        "defense_model": config_service.get_defense_model(settings.defense_model),
+    }
+
+
+@router.put("/model/config", response_model=ModelConfigResponse, summary="更新模型配置", tags=["admin"])
+def update_model_config(
+    request: ModelConfigUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+
+    if request.rewrite_model is not None:
+        config_service.set("rewrite_model", request.rewrite_model.strip())
+
+    if request.defense_model is not None:
+        config_service.set("defense_model", request.defense_model.strip())
+
+    return {
+        "rewrite_model": config_service.get_rewrite_model(settings.anthropic_model),
+        "defense_model": config_service.get_defense_model(settings.defense_model),
+    }
 
 
 @router.get("/{key}", response_model=ConfigResponse, summary="获取单个配置")

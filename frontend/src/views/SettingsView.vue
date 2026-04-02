@@ -77,6 +77,39 @@
           </section>
 
           <section class="settings-section">
+            <h2>🤖 模型配置</h2>
+            <div class="form-group">
+              <label for="rewriteModel">
+                降重大模型
+                <span class="hint">用于论文降重、改写和 RAG 主流程，建议使用更强一点的模型。</span>
+              </label>
+              <input
+                id="rewriteModel"
+                v-model="config.rewrite_model"
+                type="text"
+                class="form-input"
+                placeholder="例如：doubao-pro-32k"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="defenseModel">
+                答辩辅助模型
+                <span class="hint">用于生成答辩PPT文字和答辩稿，一般模型即可，和降重模型分开配置。</span>
+              </label>
+              <input
+                id="defenseModel"
+                v-model="config.defense_model"
+                type="text"
+                class="form-input"
+                placeholder="例如：doubao-lite-4k"
+              />
+            </div>
+
+            <button @click="saveModelConfig" class="btn btn-primary">保存模型配置</button>
+          </section>
+
+          <section class="settings-section">
             <h2>🔧 功能开关</h2>
             <div class="form-group">
               <label class="checkbox-label">
@@ -293,6 +326,8 @@ const config = ref({
   top_k: 3,
   similarity_threshold: 0.7,
   system_prompt: "",
+  rewrite_model: "",
+  defense_model: "",
   enable_registration: true,
 });
 
@@ -394,9 +429,10 @@ async function requestApi(method, path, payload) {
 }
 
 async function loadConfigs() {
-  const [ragData, promptData, flagsData] = await Promise.all([
+  const [ragData, promptData, modelData, flagsData] = await Promise.all([
     requestApi("GET", "/admin/config/rag/config"),
     requestApi("GET", "/admin/config/prompt/system"),
+    requestApi("GET", "/admin/config/model/config"),
     requestApi("GET", "/admin/config/flags"),
   ]);
 
@@ -404,6 +440,8 @@ async function loadConfigs() {
     top_k: ragData.top_k,
     similarity_threshold: ragData.similarity_threshold,
     system_prompt: promptData.prompt,
+    rewrite_model: modelData.rewrite_model,
+    defense_model: modelData.defense_model,
     enable_registration: flagsData.enable_registration,
   };
   setCachedRegistrationFlag(flagsData.enable_registration);
@@ -476,6 +514,18 @@ async function saveSystemPrompt() {
       prompt: config.value.system_prompt,
     });
     ElMessage.success("系统提示词已保存");
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "保存失败"));
+  }
+}
+
+async function saveModelConfig() {
+  try {
+    await requestApi("PUT", "/admin/config/model/config", {
+      rewrite_model: config.value.rewrite_model,
+      defense_model: config.value.defense_model,
+    });
+    ElMessage.success("模型配置已保存");
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "保存失败"));
   }

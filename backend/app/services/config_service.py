@@ -90,6 +90,19 @@ class ConfigService:
     def get_system_prompt(self) -> str:
         """获取系统提示词"""
         return self.get('system_prompt', '')
+
+    def get_model_config(self) -> dict:
+        """获取模型配置"""
+        return {
+            'rewrite_model': self.get('rewrite_model', ''),
+            'defense_model': self.get('defense_model', '')
+        }
+
+    def get_rewrite_model(self, default_model: str) -> str:
+        return self.get('rewrite_model', default_model) or default_model
+
+    def get_defense_model(self, default_model: str) -> str:
+        return self.get('defense_model', default_model) or default_model
     
     def is_registration_enabled(self) -> bool:
         """检查是否允许注册"""

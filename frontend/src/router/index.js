@@ -5,6 +5,7 @@ import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import WorkspaceView from "../views/WorkspaceView.vue";
 import SettingsView from "../views/SettingsView.vue";
+import DefenseAssistantView from "../views/DefenseAssistantView.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,6 +13,7 @@ const router = createRouter({
     { path: "/login", name: "login", component: LoginView },
     { path: "/register", name: "register", component: RegisterView },
     { path: "/", name: "workspace", component: WorkspaceView, meta: { requiresAuth: true } },
+    { path: "/defense", name: "defense", component: DefenseAssistantView, meta: { requiresAuth: true } },
     { path: "/settings", name: "settings", component: SettingsView, meta: { requiresAuth: true, requiresAdmin: true } }
   ]
 });
