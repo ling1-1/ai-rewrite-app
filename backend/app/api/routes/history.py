@@ -88,6 +88,8 @@ def update_record(
         record.name = request.name
     if request.notes is not None:
         record.notes = request.notes
+    if request.is_favorite is not None:
+        record.is_favorite = request.is_favorite
     
     db.commit()
     db.refresh(record)
@@ -161,4 +163,3 @@ def batch_delete_records(
         "message": f"成功删除 {len(records)} 条记录",
         "deleted_count": len(records)
     }
-

@@ -64,7 +64,7 @@
           </el-button>
         </el-form>
 
-        <div class="auth-footer">
+        <div v-if="registrationEnabled" class="auth-footer">
           还没有账号？
           <RouterLink to="/register">立即注册</RouterLink>
         </div>
@@ -74,15 +74,17 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import { useRouter, RouterLink } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useAuthStore } from "../stores/auth";
+import { fetchPublicFlags, getCachedRegistrationFlag } from "../api/publicFlags";
 import { getErrorMessage } from "../utils/error";
 
 const router = useRouter();
 const authStore = useAuthStore();
 const loading = ref(false);
+const registrationEnabled = ref(true);
 const form = reactive({
   username: "",
   password: ""
@@ -106,4 +108,22 @@ async function handleLogin() {
     loading.value = false;
   }
 }
+
+async function loadRegistrationFlag() {
+  const cachedFlag = getCachedRegistrationFlag();
+  if (cachedFlag !== null) {
+    registrationEnabled.value = cachedFlag;
+  }
+
+  try {
+    const data = await fetchPublicFlags();
+    registrationEnabled.value = data.enable_registration;
+  } catch (error) {
+    if (cachedFlag !== null) {
+      registrationEnabled.value = cachedFlag;
+    }
+  }
+}
+
+onMounted(loadRegistrationFlag);
 </script>

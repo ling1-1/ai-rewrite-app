@@ -34,18 +34,26 @@
         <div>
           <p class="section-kicker">Register</p>
           <h2>创建账号</h2>
-          <p>填完下面的信息，就可以开始使用你的改写工作台。</p>
+          <p v-if="registrationEnabled">填完下面的信息，就可以开始使用你的改写工作台。</p>
+          <p v-else>当前管理员已关闭注册功能，请联系管理员创建账号。</p>
         </div>
 
         <el-form class="auth-form" :model="form" @submit.prevent="handleRegister">
-          <el-input v-model="form.username" size="large" placeholder="用户名" />
+          <el-input v-model="form.username" size="large" placeholder="用户名" :disabled="!registrationEnabled" />
           <el-input
             v-model="form.password"
             size="large"
             show-password
             placeholder="密码"
+            :disabled="!registrationEnabled"
           />
-          <el-button type="primary" size="large" :loading="loading" @click="handleRegister">
+          <el-button
+            type="primary"
+            size="large"
+            :loading="loading"
+            :disabled="!registrationEnabled"
+            @click="handleRegister"
+          >
             注册账号
           </el-button>
         </el-form>
@@ -60,21 +68,28 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import { useRouter, RouterLink } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useAuthStore } from "../stores/auth";
+import { fetchPublicFlags, getCachedRegistrationFlag } from "../api/publicFlags";
 import { getErrorMessage } from "../utils/error";
 
 const router = useRouter();
 const authStore = useAuthStore();
 const loading = ref(false);
+const registrationEnabled = ref(true);
 const form = reactive({
   username: "",
   password: ""
 });
 
 async function handleRegister() {
+  if (!registrationEnabled.value) {
+    ElMessage.warning("当前已关闭用户注册");
+    return;
+  }
+
   if (!form.username || !form.password) {
     ElMessage.warning("请先填写用户名和密码");
     return;
@@ -92,4 +107,27 @@ async function handleRegister() {
     loading.value = false;
   }
 }
+
+async function loadRegistrationFlag() {
+  const cachedFlag = getCachedRegistrationFlag();
+  if (cachedFlag === false) {
+    registrationEnabled.value = false;
+    ElMessage.warning("当前已关闭用户注册");
+    router.replace("/login");
+    return;
+  }
+
+  try {
+    const data = await fetchPublicFlags();
+    registrationEnabled.value = data.enable_registration;
+    if (!data.enable_registration) {
+      ElMessage.warning("当前已关闭用户注册");
+      router.replace("/login");
+    }
+  } catch (error) {
+    registrationEnabled.value = cachedFlag ?? true;
+  }
+}
+
+onMounted(loadRegistrationFlag);
 </script>

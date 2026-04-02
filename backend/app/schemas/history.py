@@ -27,6 +27,7 @@ class HistoryRecordUpdate(BaseModel):
     """历史记录更新请求"""
     name: Optional[str] = None
     notes: Optional[str] = None
+    is_favorite: Optional[bool] = None
 
 
 class HistoryBatchDeleteRequest(BaseModel):

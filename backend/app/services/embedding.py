@@ -1,7 +1,7 @@
 """
-豆包 Embedding 服务
+Embedding 服务
 
-用于将文本转换为 1536 维向量，支持 RAG 检索
+当前默认使用 Voyage AI，将文本转换为向量用于 RAG 检索。
 """
 
 import httpx
@@ -13,26 +13,33 @@ class EmbeddingServiceError(Exception):
     pass
 
 
-def get_embedding(text: str) -> list:
+def get_embedding(text: str, input_type: str = "document") -> list:
     """
-    获取文本的向量嵌入（使用豆包 Embedding API）
-    
+    获取文本的向量嵌入
+
     Args:
         text: 输入文本
+        input_type: "document" 或 "query"
         
     Returns:
-        list: 1536 维向量
+        list: 向量
         
     Raises:
         EmbeddingServiceError: API 调用失败
     """
     if not settings.embedding_api_key:
         raise EmbeddingServiceError("尚未配置 Embedding API Key")
-    
+
+    provider = settings.embedding_provider.lower().strip()
+    if provider != "voyage":
+        raise EmbeddingServiceError(f"暂不支持的 Embedding Provider: {settings.embedding_provider}")
+
     url = f"{settings.embedding_base_url.rstrip('/')}/embeddings"
     payload = {
+        "input": [text.strip()],
         "model": settings.embedding_model,
-        "input": text.strip(),
+        "input_type": input_type,
+        "output_dimension": settings.embedding_dimension,
     }
     headers = {
         "Authorization": f"Bearer {settings.embedding_api_key}",

@@ -22,11 +22,18 @@ class Settings(BaseSettings):
     anthropic_max_tokens: int = 4096
     anthropic_temperature: float = 0.7
     
-    # 豆包 Embedding 配置
+    # Embedding 配置
+    embedding_provider: str = "voyage"
     embedding_api_key: str = ""
-    embedding_model: str = "doubao-embedding-lite"
-    embedding_base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
-    embedding_dimension: int = 1536
+    embedding_model: str = "voyage-4-lite"
+    embedding_base_url: str = "https://api.voyageai.com/v1"
+    embedding_dimension: int = 1024
+
+    # 向量数据库后端
+    vector_db_backend: str = "vikingdb"
+    qdrant_url: str = ""
+    qdrant_api_key: str = ""
+    qdrant_collection: str = "ai_rewrite_records"
     
     # RAG 检索配置
     rag_top_k: int = 10

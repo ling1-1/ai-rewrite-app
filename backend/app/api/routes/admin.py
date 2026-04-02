@@ -66,27 +66,6 @@ def get_all_configs(
     return configs
 
 
-@router.get("/{key}", response_model=ConfigResponse, summary="获取单个配置")
-def get_config(key: str, db: Session = Depends(get_db)):
-    """获取指定配置"""
-    config_service = ConfigService(db)
-    value = config_service.get(key)
-    
-    if value is None:
-        raise HTTPException(status_code=404, detail=f"配置 {key} 不存在")
-    
-    return {"key": key, "value": value, "description": ""}
-
-
-@router.put("/{key}", response_model=ConfigResponse, summary="更新配置")
-def update_config(key: str, request: ConfigUpdateRequest, db: Session = Depends(get_db)):
-    """更新指定配置"""
-    config_service = ConfigService(db)
-    config_service.set(key, request.value, request.description)
-    
-    return {"key": key, "value": request.value, "description": request.description}
-
-
 @router.get("/rag/config", response_model=RAGConfigResponse, summary="获取 RAG 配置", tags=["admin"])
 def get_rag_config(
     db: Session = Depends(get_db),
@@ -163,3 +142,33 @@ def update_registration_flag(
     config_service = ConfigService(db)
     config_service.set('enable_registration', str(enable).lower())
     return {"enable_registration": enable}
+
+
+@router.get("/{key}", response_model=ConfigResponse, summary="获取单个配置")
+def get_config(
+    key: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """获取指定配置"""
+    config_service = ConfigService(db)
+    value = config_service.get(key)
+
+    if value is None:
+        raise HTTPException(status_code=404, detail=f"配置 {key} 不存在")
+
+    return {"key": key, "value": value, "description": ""}
+
+
+@router.put("/{key}", response_model=ConfigResponse, summary="更新配置")
+def update_config(
+    key: str,
+    request: ConfigUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """更新指定配置"""
+    config_service = ConfigService(db)
+    config_service.set(key, request.value, request.description)
+
+    return {"key": key, "value": request.value, "description": request.description}

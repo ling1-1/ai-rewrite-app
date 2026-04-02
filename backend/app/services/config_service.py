@@ -4,10 +4,9 @@
 支持动态配置 RAG 参数、系统提示词、功能开关等
 """
 
-from sqlalchemy.orm import Session
 from sqlalchemy import select
-from typing import Optional, Any
-import json
+from sqlalchemy.orm import Session
+from typing import Any
 
 from app.models.config import Config
 
@@ -33,24 +32,43 @@ class ConfigService:
         elif key in ['rag_similarity_threshold']:
             return float(config.value)
         elif key in ['enable_registration']:
-            return config.value.lower() == 'true'
+            if isinstance(config.value, bool):
+                return config.value
+            if isinstance(config.value, (int, float)):
+                return bool(config.value)
+            return str(config.value).strip().lower() in {'true', '1', 'yes', 'on'}
         else:
             return config.value
+
+    def _serialize_value(self, key: str, value: Any) -> Any:
+        """按配置项语义存储原生类型，兼容 PostgreSQL JSONB。"""
+        if key == 'rag_top_k':
+            return int(value)
+        if key == 'rag_similarity_threshold':
+            return float(value)
+        if key == 'enable_registration':
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, (int, float)):
+                return bool(value)
+            return str(value).strip().lower() in {'true', '1', 'yes', 'on'}
+        return value
     
     def set(self, key: str, value: Any, description: str = None) -> None:
         """更新配置值"""
         config = self.db.execute(
             select(Config).where(Config.key == key)
         ).scalar_one_or_none()
+        serialized_value = self._serialize_value(key, value)
         
         if config:
-            config.value = str(value)
+            config.value = serialized_value
             if description:
                 config.description = description
         else:
             config = Config(
                 key=key,
-                value=str(value),
+                value=serialized_value,
                 description=description
             )
             self.db.add(config)

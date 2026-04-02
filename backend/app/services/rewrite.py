@@ -23,6 +23,33 @@ DEFAULT_SYSTEM_PROMPT = """
 """.strip()
 
 
+def build_rag_prompt(similar_docs: list[dict], user_input: str) -> str:
+    """根据检索结果构建统一的 RAG 提示词。"""
+    if not similar_docs:
+        return user_input
+
+    examples = []
+    for i, doc in enumerate(similar_docs[:5], 1):
+        example = f"""示例 {i}:
+原文：{doc.get('original_text', '')[:200]}...
+改写：{doc.get('rewrite_text', '')[:200]}...
+"""
+        examples.append(example)
+
+    examples_text = "\n\n".join(examples)
+    return f"""你是一个专业的论文改写助手。
+
+参考以下改写示例（按相关性排序）：
+
+{examples_text}
+
+请根据上述示例的风格和技巧，改写以下论文内容：
+
+原文：{user_input}
+
+改写："""
+
+
 def rewrite_text(
     source_text: str,
     db: Optional[Session] = None,
@@ -80,10 +107,7 @@ def rewrite_text(
             
             # 构建 RAG 提示词
             if similar_docs:
-                # 使用 VikingRAGService 的提示词构建（兼容抽象层）
-                from app.services.viking_rag_service import VikingRAGService
-                rag_service = VikingRAGService()
-                prompt = rag_service.build_rag_prompt(similar_docs, source_text)
+                prompt = build_rag_prompt(similar_docs, source_text)
                 
                 print(f"📝 构建的完整提示词:\n{'-'*60}")
                 print(prompt)

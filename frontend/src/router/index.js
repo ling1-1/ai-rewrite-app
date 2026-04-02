@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
+import { getCachedRegistrationFlag } from "../api/publicFlags";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
 import WorkspaceView from "../views/WorkspaceView.vue";
@@ -35,8 +36,14 @@ router.beforeEach((to) => {
     return { name: "workspace" };
   }
 
+  if (to.name === "register") {
+    const cachedFlag = getCachedRegistrationFlag();
+    if (cachedFlag === false) {
+      return { name: "login" };
+    }
+  }
+
   return true;
 });
 
 export default router;
-

@@ -2,16 +2,22 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse
+from app.services.config_service import ConfigService
 
 router = APIRouter()
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+    config_service = ConfigService(db)
+    if not config_service.is_registration_enabled():
+        raise HTTPException(status_code=403, detail="当前已关闭用户注册")
+
     existing_user = db.scalar(select(User).where(User.username == payload.username))
     if existing_user:
         raise HTTPException(status_code=400, detail="该用户名已注册")
@@ -36,3 +42,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     access_token = create_access_token(str(user.id))
     return {"access_token": access_token, "user": user}
 
+
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user

@@ -95,7 +95,10 @@
               <p class="section-kicker">History</p>
               <h2 class="panel-title">历史记录</h2>
             </div>
-            <el-button text @click="loadHistory">刷新</el-button>
+            <div class="history-header-actions">
+              <el-button text @click="syncFavoriteHistory">同步收藏</el-button>
+              <el-button text @click="loadHistory">刷新</el-button>
+            </div>
           </div>
 
           <div v-if="history.length" class="history-list">
@@ -103,28 +106,60 @@
               v-for="item in history"
               :key="item.id"
               class="history-item"
-              :class="{ 'is-active': activeId === item.id }"
+              :class="{ 'is-active': activeId === item.id, 'is-favorite': item.is_favorite }"
               @click="applyHistory(item)"
             >
-              <strong>{{ formatDate(item.created_at) }}</strong>
+              <div class="history-item-head">
+                <div class="history-item-title">
+                  <strong>{{ item.name || formatDate(item.created_at) }}</strong>
+                  <span v-if="item.is_favorite" class="favorite-badge">★ 已收藏</span>
+                </div>
+                <div class="history-item-actions" @click.stop>
+                  <el-button
+                    v-if="item.is_favorite"
+                    text
+                    size="small"
+                    type="success"
+                    @click="handleSyncToVectorDb(item)"
+                  >
+                    入库
+                  </el-button>
+                  <el-button text size="small" @click="openEditDialog(item)">
+                    编辑
+                  </el-button>
+                  <el-button text size="small" type="danger" @click="handleDelete(item)">
+                    删除
+                  </el-button>
+                </div>
+              </div>
               <div class="history-text">{{ item.source_text }}</div>
-              <div class="history-meta">点击可回填原文与结果</div>
+              <div class="history-meta">
+                {{ item.is_favorite ? "已收藏，点击可回填原文与结果" : "点击可回填原文与结果" }}
+              </div>
             </div>
           </div>
           <div v-else class="history-empty">还没有历史记录，先试一段文本吧。</div>
         </aside>
       </div>
     </div>
+
+    <HistoryEditDialog
+      v-if="editingRecord"
+      :record="editingRecord"
+      @update="handleHistoryUpdated"
+      @close="editingRecord = null"
+    />
   </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { useAuthStore } from "../stores/auth";
 import http from "../api/http";
 import { getErrorMessage } from "../utils/error";
+import HistoryEditDialog from "../components/HistoryEditDialog.vue";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -136,6 +171,17 @@ const history = ref([]);
 const activeId = ref(null);
 const uploadedFileName = ref("");
 const fileInput = ref(null);
+const editingRecord = ref(null);
+
+function sortHistoryItems(items) {
+  return [...items].sort((a, b) => {
+    if (Boolean(a.is_favorite) !== Boolean(b.is_favorite)) {
+      return a.is_favorite ? -1 : 1;
+    }
+
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
 
 function goToSettings() {
   router.push('/settings');
@@ -144,7 +190,7 @@ function goToSettings() {
 async function loadHistory() {
   try {
     const { data } = await http.get("/history");
-    history.value = data;
+    history.value = sortHistoryItems(data);
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "加载历史记录失败"));
   }
@@ -231,6 +277,68 @@ function applyHistory(item) {
   uploadedFileName.value = "";
 }
 
+function openEditDialog(item) {
+  editingRecord.value = { ...item };
+}
+
+function handleHistoryUpdated(updatedRecord) {
+  history.value = sortHistoryItems(
+    history.value.map((item) =>
+      item.id === updatedRecord.id ? updatedRecord : item
+    )
+  );
+}
+
+async function handleSyncToVectorDb(item) {
+  try {
+    await http.post(`/rewrite/${item.id}/sync-to-vector-db`);
+    ElMessage.success("已同步到向量数据库");
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "同步失败"));
+  }
+}
+
+async function syncFavoriteHistory() {
+  try {
+    const { data } = await http.post("/rewrite/sync-to-vector-db?favorites_only=true");
+    ElMessage.success(data.message || "同步完成");
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "同步失败"));
+  }
+}
+
+async function handleDelete(item) {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除“${item.name || formatDate(item.created_at)}”吗？`,
+      "删除历史记录",
+      {
+        confirmButtonText: "删除",
+        cancelButtonText: "取消",
+        type: "warning"
+      }
+    );
+
+    await http.delete(`/history/${item.id}`);
+    history.value = history.value.filter((record) => record.id !== item.id);
+
+    if (activeId.value === item.id) {
+      activeId.value = null;
+      sourceText.value = "";
+      resultText.value = "";
+      uploadedFileName.value = "";
+    }
+
+    ElMessage.success("删除成功");
+  } catch (error) {
+    if (error === "cancel") {
+      return;
+    }
+
+    ElMessage.error(getErrorMessage(error, "删除失败"));
+  }
+}
+
 function handleLogout() {
   authStore.logout();
   router.push("/login");
@@ -242,3 +350,54 @@ function formatDate(value) {
 
 onMounted(loadHistory);
 </script>
+
+<style scoped>
+.history-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-item-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.history-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.favorite-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.history-item.is-favorite {
+  border-color: rgba(245, 158, 11, 0.38);
+  background: linear-gradient(135deg, rgba(255, 248, 235, 0.96), rgba(255, 255, 255, 0.92));
+  box-shadow: 0 14px 30px rgba(245, 158, 11, 0.12);
+}
+
+.history-item.is-favorite .history-meta {
+  color: #b45309;
+  font-weight: 600;
+}
+</style>

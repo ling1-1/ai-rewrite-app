@@ -28,7 +28,14 @@ class VectorDBBackend(ABC):
         pass
     
     @abstractmethod
-    def add(self, original_text: str, rewrite_text: str, metadata: List[str]) -> bool:
+    def add(
+        self,
+        original_text: str,
+        rewrite_text: str,
+        metadata: List[str],
+        doc_id: Optional[str] = None,
+        extra_payload: Optional[Dict[str, Any]] = None,
+    ) -> bool:
         """添加文档"""
         pass
     
@@ -53,7 +60,14 @@ class VikingDBBackend(VectorDBBackend):
     def search(self, query_text: str, limit: int = 5, threshold: float = 0.7) -> List[Dict[str, Any]]:
         return self.service.search(query_text, limit=limit)
     
-    def add(self, original_text: str, rewrite_text: str, metadata: List[str]) -> bool:
+    def add(
+        self,
+        original_text: str,
+        rewrite_text: str,
+        metadata: List[str],
+        doc_id: Optional[str] = None,
+        extra_payload: Optional[Dict[str, Any]] = None,
+    ) -> bool:
         return self.service.add_single(original_text, rewrite_text, metadata)
     
     def delete(self, doc_id: str) -> bool:
@@ -76,7 +90,14 @@ class PgVectorBackend(VectorDBBackend):
         # TODO: 实现 pgvector 检索
         raise NotImplementedError("PgVectorBackend not implemented yet")
     
-    def add(self, original_text: str, rewrite_text: str, metadata: List[str]) -> bool:
+    def add(
+        self,
+        original_text: str,
+        rewrite_text: str,
+        metadata: List[str],
+        doc_id: Optional[str] = None,
+        extra_payload: Optional[Dict[str, Any]] = None,
+    ) -> bool:
         # TODO: 实现 pgvector 添加
         raise NotImplementedError("PgVectorBackend not implemented yet")
     
@@ -90,27 +111,38 @@ class PgVectorBackend(VectorDBBackend):
 
 
 class QdrantBackend(VectorDBBackend):
-    """Qdrant 后端实现（待实现）"""
+    """Qdrant 后端实现"""
     
     def __init__(self):
-        # TODO: 实现 Qdrant 连接
-        pass
+        from app.services.qdrant_service import QdrantService
+
+        self.service = QdrantService()
     
     def search(self, query_text: str, limit: int = 5, threshold: float = 0.7) -> List[Dict[str, Any]]:
-        # TODO: 实现 Qdrant 检索
-        raise NotImplementedError("QdrantBackend not implemented yet")
+        return self.service.search(query_text, limit=limit, threshold=threshold)
     
-    def add(self, original_text: str, rewrite_text: str, metadata: List[str]) -> bool:
-        # TODO: 实现 Qdrant 添加
-        raise NotImplementedError("QdrantBackend not implemented yet")
+    def add(
+        self,
+        original_text: str,
+        rewrite_text: str,
+        metadata: List[str],
+        doc_id: Optional[str] = None,
+        extra_payload: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        self.service.add_document(
+            original_text,
+            rewrite_text,
+            metadata=metadata,
+            extra_payload=extra_payload,
+            doc_id=doc_id,
+        )
+        return True
     
     def delete(self, doc_id: str) -> bool:
-        # TODO: 实现 Qdrant 删除
-        raise NotImplementedError("QdrantBackend not implemented yet")
+        return self.service.delete(doc_id)
     
     def count(self) -> int:
-        # TODO: 实现 Qdrant 计数
-        raise NotImplementedError("QdrantBackend not implemented yet")
+        return self.service.count()
 
 
 # 后端工厂

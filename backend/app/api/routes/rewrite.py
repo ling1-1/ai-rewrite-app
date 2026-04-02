@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
@@ -10,10 +9,47 @@ from app.models.user import User
 from app.schemas.rewrite import FileExtractResponse, RewriteRequest, RewriteResponse
 from app.services.file_extract import FileExtractError, extract_text_from_upload
 from app.services.rewrite import RewriteServiceError, rewrite_text
-from app.services.viking_rag_service import VikingRAGService
-from app.core.config import settings
+from app.services.vector_db_backend import get_vector_db
 
 router = APIRouter()
+
+
+def _build_vector_doc(record: RewriteRecord, username: str) -> dict:
+    return {
+        "id": f"rewrite_record_{record.id}",
+        "original_text": record.source_text,
+        "rewrite_text": record.result_text,
+        "metadata": [username],
+        "payload": {
+            "record_id": record.id,
+            "user_id": record.user_id,
+            "username": username,
+            "created_at": record.created_at.isoformat() if record.created_at else None,
+            "notes": record.notes,
+            "is_favorite": record.is_favorite,
+            "name": record.name,
+        },
+    }
+
+
+def _sync_documents_to_vector_db(vector_db, documents: list[dict]) -> int:
+    if not documents:
+        return 0
+
+    if hasattr(vector_db, "service") and hasattr(vector_db.service, "add_documents"):
+        return int(vector_db.service.add_documents(documents))
+
+    synced_count = 0
+    for doc in documents:
+        if vector_db.add(
+            doc["original_text"],
+            doc["rewrite_text"],
+            doc["metadata"],
+            doc_id=doc.get("id"),
+            extra_payload=doc.get("payload"),
+        ):
+            synced_count += 1
+    return synced_count
 
 
 @router.post("", response_model=RewriteResponse)
@@ -55,22 +91,21 @@ def create_rewrite(
     db.commit()
     db.refresh(record)
 
-    # ⚠️ 不再自动写入 VikingDB - 由用户手动选择
-    # VikingDB 只存储明确成功的降重案例
-
     return record
 
 
 @router.post("/sync-to-viking", response_model=dict)
-def sync_to_viking(
+@router.post("/sync-to-vector-db", response_model=dict)
+def sync_to_vector_db(
     limit: int = 100,
+    favorites_only: bool = Query(True, description="仅同步已收藏记录"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    同步历史数据到 VikingDB
+    同步历史数据到当前向量数据库
     
-    从本地数据库读取历史改写记录，批量导入到 VikingDB 向量数据库
+    从本地数据库读取历史改写记录，批量导入到当前向量数据库
     
     Args:
         limit: 同步数量上限
@@ -78,10 +113,14 @@ def sync_to_viking(
         current_user: 当前用户
     """
     try:
-        # 查询历史记录
-        records = db.query(RewriteRecord).filter(
+        query = db.query(RewriteRecord).filter(
             RewriteRecord.user_id == current_user.id
-        ).order_by(
+        )
+
+        if favorites_only:
+            query = query.filter(RewriteRecord.is_favorite.is_(True))
+
+        records = query.order_by(
             RewriteRecord.created_at.desc()
         ).limit(limit).all()
         
@@ -92,25 +131,16 @@ def sync_to_viking(
                 "synced_count": 0
             }
         
-        # 转换为 VikingDB 格式
-        documents = []
-        for record in records:
-            doc = {
-                "original_text": record.source_text,
-                "rewrite_text": record.result_text,
-                "metadata": []  # 可以添加标签
-            }
-            documents.append(doc)
+        documents = [_build_vector_doc(record, current_user.username) for record in records]
         
-        # 批量导入到 VikingDB
-        rag_service = VikingRAGService()
-        success = rag_service.add_documents(documents)
-        
-        if success:
+        vector_db = get_vector_db()
+        synced_count = _sync_documents_to_vector_db(vector_db, documents)
+
+        if synced_count:
             return {
                 "success": True,
-                "message": f"成功同步 {len(documents)} 条记录到 VikingDB",
-                "synced_count": len(documents)
+                "message": f"成功同步 {synced_count} 条记录到向量数据库",
+                "synced_count": synced_count
             }
         else:
             return {
@@ -124,13 +154,14 @@ def sync_to_viking(
 
 
 @router.post("/{record_id}/sync-to-viking")
-def sync_record_to_viking(
+@router.post("/{record_id}/sync-to-vector-db")
+def sync_record_to_vector_db(
     record_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    手动将历史记录写入 VikingDB（用于 RAG 检索）
+    手动将历史记录写入当前向量数据库（用于 RAG 检索）
     
     只有明确成功的降重案例才写入向量数据库
     """
@@ -142,45 +173,39 @@ def sync_record_to_viking(
     
     if not record:
         raise HTTPException(status_code=404, detail="记录不存在")
+
+    if not record.is_favorite:
+        raise HTTPException(status_code=400, detail="请先将该记录标记为收藏，再同步到向量数据库")
     
     try:
-        from app.services.viking_rag_service import VikingRAGService
-        rag_service = VikingRAGService()
-        
-        # metadata 使用字符串数组（VikingDB 要求的格式）
-        # 存储：用户名、使用模型、使用时间
-        username = getattr(current_user, 'username', f'user_{current_user.id}')
-        metadata = [
-            username,
-            settings.anthropic_model,
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ]
-        
-        print(f"📝 手动写入 VikingDB:")
+        print(f"📝 手动写入向量数据库:")
         print(f"  record_id: {record_id}")
         print(f"  original_text: {record.source_text[:50]}...")
         print(f"  rewrite_text: {record.result_text[:50]}...")
-        print(f"  metadata: {metadata}")
-        
-        success = rag_service.add_single(
-            original_text=record.source_text,
-            rewrite_text=record.result_text,
-            metadata=metadata
+        print(f"  favorite: {record.is_favorite}")
+
+        vector_db = get_vector_db()
+        success = vector_db.add(
+            record.source_text,
+            record.result_text,
+            [current_user.username],
+            doc_id=f"rewrite_record_{record.id}",
+            extra_payload=_build_vector_doc(record, current_user.username)["payload"],
         )
         
         if success:
-            print(f"✅ 成功写入 VikingDB")
+            print(f"✅ 成功写入向量数据库")
             return {
                 "success": True,
                 "message": "已成功写入向量数据库",
                 "record_id": record_id
             }
         else:
-            print(f"⚠️ VikingDB 写入返回失败")
-            raise HTTPException(status_code=500, detail="VikingDB 写入失败")
+            print(f"⚠️ 向量数据库写入返回失败")
+            raise HTTPException(status_code=500, detail="向量数据库写入失败")
             
     except Exception as e:
-        print(f"❌ 写入 VikingDB 异常：{e}")
+        print(f"❌ 写入向量数据库异常：{e}")
         raise HTTPException(status_code=500, detail=f"写入失败：{str(e)}")
 
 

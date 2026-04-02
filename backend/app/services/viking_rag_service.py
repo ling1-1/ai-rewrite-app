@@ -39,7 +39,9 @@ class VikingRAGService:
         self.index_name = index_name or os.getenv("VIKING_INDEX", "ai_rewrite_kb_index")
         
         if not self.ak or not self.sk:
-            raise ValueError("请配置 VOLC_AK 和 VOLC_SK 环境变量")
+            # 没有配置火山 API，RAG 功能禁用
+            self.enabled = False
+            return
         
         # 初始化客户端
         auth = IAM(ak=self.ak, sk=self.sk)
