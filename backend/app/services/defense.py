@@ -142,7 +142,10 @@ def _call_chat_model(user_prompt: str, db: Optional[Session] = None) -> str:
         response = httpx.post(url, json=payload, headers=headers, timeout=120.0)
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
-        raise DefenseServiceError(_extract_error_message(exc.response)) from exc
+        message = _extract_error_message(exc.response)
+        raise DefenseServiceError(
+            f"答辩模型 API 请求失败（HTTP {exc.response.status_code}）：{message}"
+        ) from exc
     except httpx.HTTPError as exc:
         raise DefenseServiceError("无法连接 API，请检查网络或接口配置。") from exc
 

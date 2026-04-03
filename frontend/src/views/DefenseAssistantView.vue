@@ -54,6 +54,25 @@
                     <span class="muted">{{ thesisText.trim().length }} 字</span>
                   </div>
 
+                <div class="defense-toolbar thesis-toolbar">
+                  <div class="view-toggle">
+                    <button
+                      class="view-toggle-btn"
+                      :class="{ 'is-active': thesisViewMode === 'preview' }"
+                      @click="thesisViewMode = 'preview'"
+                    >
+                      正文预览
+                    </button>
+                    <button
+                      class="view-toggle-btn"
+                      :class="{ 'is-active': thesisViewMode === 'edit' }"
+                      @click="thesisViewMode = 'edit'"
+                    >
+                      手动编辑
+                    </button>
+                  </div>
+                </div>
+
                 <div class="defense-brief">
                   <strong>建议输入内容</strong>
                   <p>优先放摘要、研究背景、方法、结论和创新点。内容不需要特别完整，但至少要让模型能看清论文在研究什么、做出了什么结果。</p>
@@ -92,12 +111,22 @@
                   <span>正文长度：{{ thesisText.trim().length }} 字</span>
                 </div>
 
-                <div class="editor-box defense-thesis-box">
+                <div v-if="thesisViewMode === 'preview'" class="document-preview-window">
+                  <div v-if="thesisText.trim()" class="document-preview-content">
+                    {{ thesisText }}
+                  </div>
+                  <div v-else class="defense-empty-state document-preview-empty">
+                    <strong>还没有可预览的论文正文</strong>
+                    <p>上传论文文件后，会先在这里展示提取出的正文内容。你也可以切到“手动编辑”直接粘贴文本。</p>
+                  </div>
+                </div>
+
+                <div v-else class="editor-box defense-thesis-box">
                   <textarea
                     v-model="thesisText"
                     placeholder="把论文正文、摘要、结论或核心章节粘贴到这里。内容越完整，生成的 PPT 和稿子越稳。"
                   />
-                  </div>
+                </div>
 
                   <div class="editor-actions defense-actions">
                     <el-button size="large" @click="handleClear">清空内容</el-button>
@@ -233,6 +262,7 @@ const pptLoading = ref(false);
 const speechLoading = ref(false);
 const flowLoading = ref(false);
 const pptViewMode = ref("preview");
+const thesisViewMode = ref("preview");
 const fileInput = ref(null);
 
 const fallbackSectionTitles = [
@@ -382,6 +412,7 @@ async function handleFileChange(event) {
     const { data } = await http.post("/rewrite/extract-file", formData);
     thesisText.value = data.source_text;
     uploadedFileName.value = data.filename;
+    thesisViewMode.value = "preview";
     ElMessage.success(`已导入 ${data.filename}`);
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "论文文件解析失败"));
@@ -396,6 +427,7 @@ function handleClear() {
   pptContent.value = "";
   speechContent.value = "";
   pptViewMode.value = "preview";
+  thesisViewMode.value = "preview";
   uploadedFileName.value = "";
 }
 

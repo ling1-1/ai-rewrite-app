@@ -394,6 +394,29 @@ textarea {
   min-height: 340px;
 }
 
+.document-preview-window {
+  margin-top: 14px;
+  min-height: 360px;
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(248, 246, 241, 0.98), rgba(255, 255, 255, 0.95));
+  padding: 18px;
+}
+
+.document-preview-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  line-height: 1.95;
+  font-size: 0.98rem;
+}
+
+.document-preview-empty {
+  min-height: 320px;
+}
+
 .defense-preview-card {
   min-height: 0;
 }
@@ -406,6 +429,11 @@ textarea {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.thesis-toolbar {
+  margin-top: 16px;
+  justify-content: flex-start;
 }
 
 .view-toggle {
