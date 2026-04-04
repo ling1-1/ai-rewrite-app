@@ -33,6 +33,14 @@ DEFENSE_PPT_PROMPT_TEMPLATE = """
 {ppt_outline}
 7. 是否包含个人观点：{include_personal_view_text}
 8. 是否包含致谢：{include_acknowledgement_text}
+9. 必须严格输出为 {ppt_page_count} 页，少一页或多一页都不可以。
+10. 每一页都必须使用下面这种固定格式，不能改写页标记，不能合并多页：
+【第1页】页标题
+- 要点1
+- 要点2
+- 要点3
+11. 每页只保留 2 到 4 条要点，每条要点一句话，不要写成长段落，不要写成答辩稿。
+12. 除了上述页结构，不要输出额外说明、前言、总结提示或 markdown 代码块。
 
 论文内容如下：
 {thesis_text}

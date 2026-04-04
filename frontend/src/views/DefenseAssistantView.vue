@@ -251,6 +251,10 @@
                     </div>
                   </div>
 
+                  <div v-if="pptPageMismatchWarning" class="submission-status-banner warning-banner">
+                    {{ pptPageMismatchWarning }}
+                  </div>
+
                   <div v-if="pptViewMode === 'preview'" class="ppt-preview-board">
                     <div v-if="parsedPptSections.length" class="ppt-slide-grid">
                       <article
@@ -466,6 +470,48 @@ const parsedPptSections = computed(() => {
     .replace(/（/g, "(")
     .replace(/）/g, ")");
 
+  const pageBlocks = normalized
+    .split(/\n(?=【第\d+页】)/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  if (pageBlocks.length) {
+    return pageBlocks.map((block, index) => {
+      const lines = block
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      const markerLine = lines.shift() || "";
+      const titleLine = lines.shift() || outlineSectionTitles.value[index] || fallbackSectionTitles[index] || `第 ${index + 1} 页`;
+      const cleanedLines = lines.map((line) => line.replace(/^[-*•]\s*/, "").trim()).filter(Boolean);
+
+      return {
+        index: index + 1,
+        title: titleLine.replace(/^【第\d+页】/, "").trim(),
+        lines: cleanedLines.length ? cleanedLines : ["建议根据论文内容补充这一页的重点内容。"],
+        marker: markerLine,
+      };
+    });
+  }
+
+  const markdownSectionBlocks = normalized
+    .split(/\n(?=\*\*第[一二三四五六七八九十0-9]+部分[：:].*\*\*)/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  if (markdownSectionBlocks.length > 1) {
+    return markdownSectionBlocks.map((block, index) => {
+      const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+      const titleLine = lines.shift() || outlineSectionTitles.value[index] || fallbackSectionTitles[index] || `第 ${index + 1} 部分`;
+      return {
+        index: index + 1,
+        title: titleLine.replace(/^\*\*|\*\*$/g, "").replace(/^第[一二三四五六七八九十0-9]+部分[：:]\s*/, "").trim(),
+        lines: lines.length ? lines : ["建议根据论文内容补充这一页的重点内容。"],
+      };
+    });
+  }
+
   const blocks = normalized
     .split(/\n(?=[一二三四五六七八九十]+、)/)
     .map((block) => block.trim())
@@ -493,6 +539,21 @@ const parsedPptSections = computed(() => {
     title: outlineSectionTitles.value[index] || fallbackSectionTitles[index] || `第 ${index + 1} 部分`,
     lines: paragraph.split("\n").map((line) => line.trim()).filter(Boolean),
   }));
+});
+
+const pptPageMismatchWarning = computed(() => {
+  const expectedCount = Number(generationConfig.value.ppt_page_count) || 0;
+  const actualCount = parsedPptSections.value.length;
+
+  if (!pptContent.value.trim() || !expectedCount || !actualCount) {
+    return "";
+  }
+
+  if (expectedCount === actualCount) {
+    return "";
+  }
+
+  return `当前预设为 ${expectedCount} 页，但本次只解析到 ${actualCount} 页。建议重新生成，或调整提示词和大纲后再试。`;
 });
 
 function buildGenerationPayload(extra = {}) {

@@ -299,6 +299,13 @@ textarea {
   box-shadow: 0 12px 24px rgba(77, 91, 255, 0.08);
 }
 
+.warning-banner {
+  border-color: rgba(245, 158, 11, 0.24);
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  box-shadow: 0 12px 24px rgba(245, 158, 11, 0.08);
+}
+
 .defense-layout {
   display: grid;
   grid-template-columns: 1.05fr 1fr 1fr;
