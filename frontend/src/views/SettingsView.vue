@@ -139,13 +139,21 @@
 
           <section class="settings-section">
             <h2>🤖 模型配置</h2>
+            <div class="info-box">
+              <p><strong>填写建议：</strong>优先使用正式 API，不建议把仅面向编程工具的专用套餐直接接到你的网站后端。</p>
+              <p class="hint">
+                Base URL 可直接填写到服务商给出的 <code>/v1</code> 或 <code>/api/v3</code> 这一层，系统会自动补全 <code>chat/completions</code>。<br />
+                例如 Claude 可填 <code>https://api.anthropic.com</code>，火山可填 <code>https://ark.cn-beijing.volces.com/api/v3</code>。<br />
+                如果你用阿里云 OpenAI 兼容地址，通常应直接填到 <code>.../v1</code>，并确认 API Key 与该产品线匹配。
+              </p>
+            </div>
             <div class="model-config-grid">
               <div class="model-config-card">
                 <h3>降重模型</h3>
                 <div class="form-group">
                   <label for="rewriteApiKey">
                     API Key
-                    <span class="hint">用于论文降重、改写和 RAG 主流程。</span>
+                    <span class="hint">用于论文降重、改写和 RAG 主流程。要和下面的 Base URL 属于同一家服务。</span>
                   </label>
                   <el-input
                     id="rewriteApiKey"
@@ -173,7 +181,7 @@
                 <div class="form-group">
                   <label for="rewriteBaseUrl">
                     Base URL
-                    <span class="hint">可切换不同模型服务商的接口地址。</span>
+                    <span class="hint">支持直接填写到 <code>/v1</code> 或 <code>/api/v3</code>，系统会自动补全接口路径。</span>
                   </label>
                   <input
                     id="rewriteBaseUrl"
@@ -217,7 +225,7 @@
                 <div class="form-group">
                   <label for="defenseApiKey">
                     API Key
-                    <span class="hint">可单独配置成火山、豆包等模型服务。</span>
+                    <span class="hint">答辩辅助建议单独用更稳定、成本更低的正式 API。</span>
                   </label>
                   <el-input
                     id="defenseApiKey"
@@ -245,7 +253,7 @@
                 <div class="form-group">
                   <label for="defenseBaseUrl">
                     Base URL
-                    <span class="hint">答辩辅助可独立走另一家模型服务。</span>
+                    <span class="hint">如果使用 OpenAI 兼容接口，建议直接填到 <code>.../v1</code> 这一层，不要手动拼 <code>/chat/completions</code>。</span>
                   </label>
                   <input
                     id="defenseBaseUrl"

@@ -64,6 +64,10 @@
                 当前管理员已关闭向量检索，此处暂不可开启。
               </p>
 
+              <div v-if="submissionStatusText" class="submission-status-banner">
+                {{ submissionStatusText }}
+              </div>
+
               <div class="editor-box">
                 <textarea
                   v-model="sourceText"
@@ -76,8 +80,8 @@
               </div>
 
               <div class="editor-actions">
-                <el-button size="large" @click="handleClear">清空内容</el-button>
-                <el-button type="primary" size="large" :loading="loading" @click="handleRewrite">
+                <el-button size="large" :disabled="loading" @click="handleClear">清空内容</el-button>
+                <el-button type="primary" size="large" :loading="loading" :disabled="loading" @click="handleRewrite">
                   开始处理
                 </el-button>
               </div>
@@ -97,7 +101,7 @@
               </div>
 
               <div class="editor-actions">
-                <el-button size="large" @click="handleCopy">复制结果</el-button>
+                <el-button size="large" :disabled="loading" @click="handleCopy">复制结果</el-button>
               </div>
             </article>
           </div>
@@ -110,8 +114,8 @@
               <h2 class="panel-title">历史记录</h2>
             </div>
             <div class="history-header-actions">
-              <el-button text @click="syncFavoriteHistory">批量入库</el-button>
-              <el-button text @click="loadHistory">刷新</el-button>
+              <el-button text :loading="syncingFavorites" :disabled="syncingFavorites || loading" @click="syncFavoriteHistory">批量入库</el-button>
+              <el-button text :disabled="syncingFavorites || loading" @click="loadHistory">刷新</el-button>
             </div>
           </div>
 
@@ -141,14 +145,16 @@
                     text
                     size="small"
                     type="success"
+                    :loading="syncingRecordId === item.id"
+                    :disabled="Boolean(syncingRecordId) || syncingFavorites || loading"
                     @click="handleSyncToVectorDb(item)"
                   >
                     {{ item.is_in_vector_db ? "更新入库" : "入库" }}
                   </el-button>
-                  <el-button text size="small" @click="openEditDialog(item)">
+                  <el-button text size="small" :disabled="Boolean(syncingRecordId) || syncingFavorites || loading" @click="openEditDialog(item)">
                     编辑
                   </el-button>
-                  <el-button text size="small" type="danger" @click="handleDelete(item)">
+                  <el-button text size="small" type="danger" :disabled="Boolean(syncingRecordId) || syncingFavorites || loading" @click="handleDelete(item)">
                     删除
                   </el-button>
                 </div>
@@ -184,7 +190,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useAuthStore } from "../stores/auth";
@@ -205,6 +211,23 @@ const editingRecord = ref(null);
 const rewriteMode = ref("zh");
 const useVectorRetrieval = ref(true);
 const vectorRetrievalAvailable = ref(true);
+const syncingRecordId = ref(null);
+const syncingFavorites = ref(false);
+const submissionStatusText = computed(() => {
+  if (loading.value) {
+    return "正在处理论文内容，请勿重复提交。";
+  }
+
+  if (syncingFavorites.value) {
+    return "正在批量入库，请勿重复点击。";
+  }
+
+  if (syncingRecordId.value) {
+    return "正在同步当前记录，请勿重复点击。";
+  }
+
+  return "";
+});
 
 function sortHistoryItems(items) {
   return [...items].sort((a, b) => {
@@ -238,6 +261,9 @@ async function loadHistory() {
 }
 
 async function handleRewrite() {
+  if (loading.value) {
+    return;
+  }
   if (!sourceText.value.trim()) {
     ElMessage.warning("请先输入原文");
     return;
@@ -303,22 +329,36 @@ function handleHistoryUpdated(updatedRecord) {
 }
 
 async function handleSyncToVectorDb(item) {
+  if (syncingRecordId.value || syncingFavorites.value || loading.value) {
+    return;
+  }
+
+  syncingRecordId.value = item.id;
   try {
     const { data } = await http.post(`/rewrite/${item.id}/sync-to-vector-db`);
     ElMessage.success(data.message || "已同步到向量数据库");
     await loadHistory();
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "同步失败"));
+  } finally {
+    syncingRecordId.value = null;
   }
 }
 
 async function syncFavoriteHistory() {
+  if (syncingFavorites.value || syncingRecordId.value || loading.value) {
+    return;
+  }
+
+  syncingFavorites.value = true;
   try {
     const { data } = await http.post("/rewrite/sync-to-vector-db?favorites_only=true");
     ElMessage.success(data.message || "同步完成");
     await loadHistory();
   } catch (error) {
     ElMessage.error(getErrorMessage(error, "同步失败"));
+  } finally {
+    syncingFavorites.value = false;
   }
 }
 
@@ -422,6 +462,10 @@ onMounted(initializeWorkspace);
   margin: -4px 0 12px;
   color: #94a3b8;
   font-size: 12px;
+}
+
+.submission-status-banner {
+  margin: 0 0 14px;
 }
 
 .history-item-title {

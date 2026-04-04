@@ -33,7 +33,11 @@ def create_defense_ppt(
         raise HTTPException(status_code=400, detail="论文内容不能为空")
 
     try:
-        ppt_content = generate_defense_ppt(payload.thesis_text, db=db)
+        ppt_content = generate_defense_ppt(
+            payload.thesis_text,
+            db=db,
+            options=payload.model_dump(exclude={"thesis_text"}),
+        )
     except DefenseServiceError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -54,7 +58,12 @@ def create_defense_speech(
         raise HTTPException(status_code=400, detail="请先生成或填写答辩PPT内容")
 
     try:
-        speech_content = generate_defense_speech(payload.thesis_text, payload.ppt_content, db=db)
+        speech_content = generate_defense_speech(
+            payload.thesis_text,
+            payload.ppt_content,
+            db=db,
+            options=payload.model_dump(exclude={"thesis_text", "ppt_content"}),
+        )
     except DefenseServiceError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -73,7 +82,11 @@ def create_defense_flow(
         raise HTTPException(status_code=400, detail="论文内容不能为空")
 
     try:
-        ppt_content, speech_content = generate_defense_flow(payload.thesis_text, db=db)
+        ppt_content, speech_content = generate_defense_flow(
+            payload.thesis_text,
+            db=db,
+            options=payload.model_dump(exclude={"thesis_text"}),
+        )
     except DefenseServiceError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

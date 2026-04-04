@@ -25,26 +25,30 @@ DEFENSE_PPT_PROMPT_TEMPLATE = """
 请根据下面这篇论文内容，直接生成一份“答辩PPT文字版”，要求如下：
 
 1. 内容一定要精炼、直观、清晰，抓住重点。
-2. 语言直白一点，不要写得太复杂。
-3. 研究目的、意义、研究成果、个人观点都要站在普通本科生角度写，语气谦虚稳妥。
-4. 不要写太多，每个部分控制在适合 PPT 展示的长度。
-5. 只输出以下五个部分，按顺序写：
-一、研究背景、目的与意义（意义分为理论意义、实践意义）
-二、研究内容重点介绍
-三、研究成果
-四、个人观点（只写个人观点，不要提研究不足）
-五、致谢（简短，不要太多）
+2. 当前语言风格要求：{language_style}。
+3. 当前表达视角：{persona_style}，语气保持谦虚稳妥。
+4. 当前内容密度：{content_density}，不要写太多，每个部分控制在适合 PPT 展示的长度。
+5. 本次 PPT 预计页数：{ppt_page_count} 页。
+6. 请严格按照下面这份大纲输出，每一部分单独成段：
+{ppt_outline}
+7. 是否包含个人观点：{include_personal_view_text}
+8. 是否包含致谢：{include_acknowledgement_text}
 
 论文内容如下：
 {thesis_text}
 """.strip()
 
 DEFENSE_SPEECH_PROMPT_TEMPLATE = """
-请根据下面的论文内容和答辩PPT内容，生成一份适合 3 到 4 分钟中文本科毕业答辩的答辩稿，要求如下：
+请根据下面的论文内容和答辩PPT内容，生成一份适合 {speech_duration_minutes} 分钟左右中文本科毕业答辩的答辩稿，要求如下：
 
 1. 内容一定要精炼、直观、清晰，讲重点。
-2. 表达直白自然，不要太书面化，不要太浮夸。
-3. 必须严格对应 PPT 的五个部分展开。
+2. 当前语言风格要求：{language_style}。
+3. 当前表达视角：{persona_style}，表达直白自然，不要太书面化，不要太浮夸。
+4. 当前内容密度：{content_density}。
+5. 必须严格对应 PPT 大纲展开：
+{ppt_outline}
+6. 是否包含个人观点：{include_personal_view_text}
+7. 是否包含致谢：{include_acknowledgement_text}
 4. 不需要介绍个人信息。
 5. 不要提论文不足、局限性、未来展望。
 6. 直接输出可朗读的答辩稿正文，不要再附加说明。
@@ -57,7 +61,12 @@ DEFENSE_SPEECH_PROMPT_TEMPLATE = """
 """.strip()
 
 
-def generate_defense_ppt(thesis_text: str, db: Optional[Session] = None) -> str:
+def generate_defense_ppt(
+    thesis_text: str,
+    db: Optional[Session] = None,
+    options: Optional[dict] = None,
+) -> str:
+    context = _build_generation_context(options)
     prompt_template = DEFENSE_PPT_PROMPT_TEMPLATE
     if db:
         try:
@@ -67,12 +76,22 @@ def generate_defense_ppt(thesis_text: str, db: Optional[Session] = None) -> str:
         except Exception as exc:
             print(f"⚠️ 获取答辩PPT提示词失败：{exc}")
 
-    prompt = prompt_template.format(thesis_text=thesis_text)
+    prompt = _render_prompt(
+        prompt_template,
+        thesis_text=thesis_text,
+        **context,
+    )
 
     return _call_chat_model(prompt, db=db)
 
 
-def generate_defense_speech(thesis_text: str, ppt_content: str, db: Optional[Session] = None) -> str:
+def generate_defense_speech(
+    thesis_text: str,
+    ppt_content: str,
+    db: Optional[Session] = None,
+    options: Optional[dict] = None,
+) -> str:
+    context = _build_generation_context(options)
     prompt_template = DEFENSE_SPEECH_PROMPT_TEMPLATE
     if db:
         try:
@@ -82,17 +101,23 @@ def generate_defense_speech(thesis_text: str, ppt_content: str, db: Optional[Ses
         except Exception as exc:
             print(f"⚠️ 获取答辩稿提示词失败：{exc}")
 
-    prompt = prompt_template.format(
+    prompt = _render_prompt(
+        prompt_template,
         thesis_text=thesis_text,
         ppt_content=ppt_content,
+        **context,
     )
 
     return _call_chat_model(prompt, db=db)
 
 
-def generate_defense_flow(thesis_text: str, db: Optional[Session] = None) -> tuple[str, str]:
-    ppt_content = generate_defense_ppt(thesis_text, db=db)
-    speech_content = generate_defense_speech(thesis_text, ppt_content, db=db)
+def generate_defense_flow(
+    thesis_text: str,
+    db: Optional[Session] = None,
+    options: Optional[dict] = None,
+) -> tuple[str, str]:
+    ppt_content = generate_defense_ppt(thesis_text, db=db, options=options)
+    speech_content = generate_defense_speech(thesis_text, ppt_content, db=db, options=options)
     return ppt_content, speech_content
 
 
@@ -119,10 +144,7 @@ def _call_chat_model(user_prompt: str, db: Optional[Session] = None) -> str:
         except Exception as exc:
             print(f"⚠️ 获取答辩模型配置失败：{exc}")
 
-    if base_url.endswith("/v3"):
-        url = f"{base_url}/chat/completions"
-    else:
-        url = f"{base_url}/v1/chat/completions"
+    url = _build_chat_completions_url(base_url)
 
     payload = {
         "model": model_name,
@@ -178,3 +200,44 @@ def _extract_error_message(response: httpx.Response) -> str:
         return error.get("message") or error.get("type") or f"HTTP {response.status_code}"
 
     return str(error) or f"HTTP {response.status_code}"
+
+
+def _build_chat_completions_url(base_url: str) -> str:
+    normalized = base_url.rstrip("/")
+    if normalized.endswith("/chat/completions"):
+        return normalized
+    if normalized.endswith("/v1") or normalized.endswith("/compatible-mode/v1"):
+        return f"{normalized}/chat/completions"
+    if normalized.endswith("/v3"):
+        return f"{normalized}/chat/completions"
+    return f"{normalized}/v1/chat/completions"
+
+
+def _build_generation_context(options: Optional[dict]) -> dict:
+    options = options or {}
+    outline = (options.get("ppt_outline") or "").strip() or (
+        "一、研究背景、目的与意义\n"
+        "二、研究内容重点介绍\n"
+        "三、研究成果\n"
+        "四、个人观点\n"
+        "五、致谢"
+    )
+    return {
+        "ppt_page_count": int(options.get("ppt_page_count") or 5),
+        "ppt_outline": outline,
+        "speech_duration_minutes": int(options.get("speech_duration_minutes") or 4),
+        "language_style": options.get("language_style") or "更直白",
+        "persona_style": options.get("persona_style") or "普通本科生",
+        "content_density": options.get("content_density") or "精简",
+        "include_acknowledgement_text": "包含致谢" if options.get("include_acknowledgement", True) else "不包含致谢",
+        "include_personal_view_text": "包含个人观点" if options.get("include_personal_view", True) else "不包含个人观点",
+    }
+
+
+class _SafeFormatDict(dict):
+    def __missing__(self, key):
+        return "{" + key + "}"
+
+
+def _render_prompt(template: str, **kwargs) -> str:
+    return template.format_map(_SafeFormatDict(**kwargs))

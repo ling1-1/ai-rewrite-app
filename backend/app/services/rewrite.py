@@ -197,11 +197,7 @@ def rewrite_text(
     if not api_key:
         raise RewriteServiceError("尚未配置 API Key")
 
-    # 构建正确的 URL（避免重复 /v1）
-    if base_url.endswith('/v3'):
-        url = f"{base_url}/chat/completions"
-    else:
-        url = f"{base_url}/v1/chat/completions"
+    url = _build_chat_completions_url(base_url)
     
     payload = {
         "model": model_name,
@@ -269,3 +265,14 @@ def _extract_error_message(response: httpx.Response) -> str:
         return error.get("message") or error.get("type") or f"HTTP {response.status_code}"
 
     return str(error) or f"HTTP {response.status_code}"
+
+
+def _build_chat_completions_url(base_url: str) -> str:
+    normalized = base_url.rstrip("/")
+    if normalized.endswith("/chat/completions"):
+        return normalized
+    if normalized.endswith("/v1") or normalized.endswith("/compatible-mode/v1"):
+        return f"{normalized}/chat/completions"
+    if normalized.endswith("/v3"):
+        return f"{normalized}/chat/completions"
+    return f"{normalized}/v1/chat/completions"

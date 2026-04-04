@@ -64,6 +64,28 @@ class DefensePromptUpdateRequest(BaseModel):
     speech_prompt: Optional[str] = None
 
 
+class DefenseGenerationConfigResponse(BaseModel):
+    ppt_page_count: int
+    ppt_outline: str
+    speech_duration_minutes: int
+    language_style: str
+    persona_style: str
+    content_density: str
+    include_acknowledgement: bool
+    include_personal_view: bool
+
+
+class DefenseGenerationConfigUpdateRequest(BaseModel):
+    ppt_page_count: Optional[int] = None
+    ppt_outline: Optional[str] = None
+    speech_duration_minutes: Optional[int] = None
+    language_style: Optional[str] = None
+    persona_style: Optional[str] = None
+    content_density: Optional[str] = None
+    include_acknowledgement: Optional[bool] = None
+    include_personal_view: Optional[bool] = None
+
+
 class FeatureFlagsResponse(BaseModel):
     """功能开关响应"""
     enable_registration: bool
@@ -272,6 +294,47 @@ def update_defense_prompt(
         "ppt_prompt": config_service.get_defense_ppt_prompt() or DEFENSE_PPT_PROMPT_TEMPLATE,
         "speech_prompt": config_service.get_defense_speech_prompt() or DEFENSE_SPEECH_PROMPT_TEMPLATE,
     }
+
+
+@router.get("/prompt/defense/config", response_model=DefenseGenerationConfigResponse, summary="获取答辩生成默认配置", tags=["admin"])
+def get_defense_generation_config(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+    return config_service.get_defense_generation_config()
+
+
+@router.put("/prompt/defense/config", response_model=DefenseGenerationConfigResponse, summary="更新答辩生成默认配置", tags=["admin"])
+def update_defense_generation_config(
+    request: DefenseGenerationConfigUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    config_service = ConfigService(db)
+
+    if request.ppt_page_count is not None:
+        if not (3 <= request.ppt_page_count <= 12):
+            raise HTTPException(400, "ppt_page_count 必须在 3-12 之间")
+        config_service.set("defense_ppt_page_count", request.ppt_page_count)
+    if request.ppt_outline is not None:
+        config_service.set("defense_ppt_outline", request.ppt_outline.strip())
+    if request.speech_duration_minutes is not None:
+        if not (2 <= request.speech_duration_minutes <= 10):
+            raise HTTPException(400, "speech_duration_minutes 必须在 2-10 之间")
+        config_service.set("defense_speech_duration_minutes", request.speech_duration_minutes)
+    if request.language_style is not None:
+        config_service.set("defense_language_style", request.language_style.strip())
+    if request.persona_style is not None:
+        config_service.set("defense_persona_style", request.persona_style.strip())
+    if request.content_density is not None:
+        config_service.set("defense_content_density", request.content_density.strip())
+    if request.include_acknowledgement is not None:
+        config_service.set("defense_include_acknowledgement", request.include_acknowledgement)
+    if request.include_personal_view is not None:
+        config_service.set("defense_include_personal_view", request.include_personal_view)
+
+    return config_service.get_defense_generation_config()
 
 
 @router.get("/flags", response_model=FeatureFlagsResponse, summary="获取功能开关", tags=["admin"])

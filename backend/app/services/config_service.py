@@ -32,13 +32,20 @@ class ConfigService:
             'rewrite_max_tokens',
             'defense_max_tokens',
             'embedding_dimension',
+            'defense_ppt_page_count',
+            'defense_speech_duration_minutes',
         ]:
             return int(config.value)
         elif key in ['rag_similarity_threshold']:
             return float(config.value)
         elif key in ['rewrite_temperature', 'defense_temperature']:
             return float(config.value)
-        elif key in ['enable_registration', 'enable_vector_retrieval']:
+        elif key in [
+            'enable_registration',
+            'enable_vector_retrieval',
+            'defense_include_acknowledgement',
+            'defense_include_personal_view',
+        ]:
             if isinstance(config.value, bool):
                 return config.value
             if isinstance(config.value, (int, float)):
@@ -49,11 +56,23 @@ class ConfigService:
 
     def _serialize_value(self, key: str, value: Any) -> Any:
         """按配置项语义存储原生类型，兼容 PostgreSQL JSONB。"""
-        if key in {'rag_top_k', 'rewrite_max_tokens', 'defense_max_tokens', 'embedding_dimension'}:
+        if key in {
+            'rag_top_k',
+            'rewrite_max_tokens',
+            'defense_max_tokens',
+            'embedding_dimension',
+            'defense_ppt_page_count',
+            'defense_speech_duration_minutes',
+        }:
             return int(value)
         if key in {'rag_similarity_threshold', 'rewrite_temperature', 'defense_temperature'}:
             return float(value)
-        if key in {'enable_registration', 'enable_vector_retrieval'}:
+        if key in {
+            'enable_registration',
+            'enable_vector_retrieval',
+            'defense_include_acknowledgement',
+            'defense_include_personal_view',
+        }:
             if isinstance(value, bool):
                 return value
             if isinstance(value, (int, float)):
@@ -113,6 +132,21 @@ class ConfigService:
 
     def get_defense_speech_prompt(self) -> str:
         return self.get('defense_speech_prompt', '')
+
+    def get_defense_generation_config(self) -> dict:
+        return {
+            'ppt_page_count': self.get('defense_ppt_page_count', 5),
+            'ppt_outline': self.get(
+                'defense_ppt_outline',
+                "一、研究背景、目的与意义\n二、研究内容重点介绍\n三、研究成果\n四、个人观点\n五、致谢"
+            ),
+            'speech_duration_minutes': self.get('defense_speech_duration_minutes', 4),
+            'language_style': self.get('defense_language_style', '更直白'),
+            'persona_style': self.get('defense_persona_style', '普通本科生'),
+            'content_density': self.get('defense_content_density', '精简'),
+            'include_acknowledgement': self.get('defense_include_acknowledgement', True),
+            'include_personal_view': self.get('defense_include_personal_view', True),
+        }
 
     def get_model_config(self) -> dict:
         """获取模型配置"""

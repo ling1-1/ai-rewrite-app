@@ -78,6 +78,88 @@
                   <p>优先放摘要、研究背景、方法、结论和创新点。内容不需要特别完整，但至少要让模型能看清论文在研究什么、做出了什么结果。</p>
                 </div>
 
+                <div v-if="busyStatusText" class="submission-status-banner">
+                  {{ busyStatusText }}
+                </div>
+
+                <div class="defense-config-panel">
+                  <div class="defense-config-head">
+                    <strong>生成配置</strong>
+                    <span class="muted">这里改的是本次生成参数，不会覆盖后台默认提示词。</span>
+                  </div>
+
+                  <div class="defense-preset-bar">
+                    <span class="muted">快速预设</span>
+                    <div class="defense-preset-actions">
+                      <el-button size="small" :disabled="isBusy" @click="applyPreset('compact')">3分钟精简版</el-button>
+                      <el-button size="small" :disabled="isBusy" @click="applyPreset('standard')">4分钟标准版</el-button>
+                      <el-button size="small" :disabled="isBusy" @click="applyPreset('steady')">稳妥答辩版</el-button>
+                      <el-button size="small" type="primary" :disabled="isBusy" @click="saveGenerationDefaults">保存为默认配置</el-button>
+                    </div>
+                  </div>
+
+                  <div class="defense-config-grid">
+                    <label class="defense-config-field">
+                      <span>PPT 页数</span>
+                      <input v-model.number="generationConfig.ppt_page_count" type="number" min="3" max="12" class="form-input" />
+                    </label>
+
+                    <label class="defense-config-field">
+                      <span>答辩时长（分钟）</span>
+                      <input v-model.number="generationConfig.speech_duration_minutes" type="number" min="2" max="10" class="form-input" />
+                    </label>
+
+                    <label class="defense-config-field">
+                      <span>语言风格</span>
+                      <select v-model="generationConfig.language_style" class="form-input">
+                        <option value="更直白">更直白</option>
+                        <option value="更正式">更正式</option>
+                        <option value="更稳妥">更稳妥</option>
+                      </select>
+                    </label>
+
+                    <label class="defense-config-field">
+                      <span>表达视角</span>
+                      <select v-model="generationConfig.persona_style" class="form-input">
+                        <option value="普通本科生">普通本科生</option>
+                        <option value="稍正式一点">稍正式一点</option>
+                        <option value="更谦虚稳妥">更谦虚稳妥</option>
+                      </select>
+                    </label>
+
+                    <label class="defense-config-field">
+                      <span>内容密度</span>
+                      <select v-model="generationConfig.content_density" class="form-input">
+                        <option value="精简">精简</option>
+                        <option value="标准">标准</option>
+                        <option value="稍详细">稍详细</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div class="defense-config-switches">
+                    <label class="checkbox-label compact-checkbox">
+                      <input v-model="generationConfig.include_personal_view" type="checkbox" class="form-checkbox" />
+                      <span>包含个人观点</span>
+                    </label>
+
+                    <label class="checkbox-label compact-checkbox">
+                      <input v-model="generationConfig.include_acknowledgement" type="checkbox" class="form-checkbox" />
+                      <span>包含致谢</span>
+                    </label>
+                  </div>
+
+                  <label class="defense-config-field defense-config-outline">
+                    <span>PPT 大纲</span>
+                    <textarea
+                      v-model="generationConfig.ppt_outline"
+                      class="form-textarea defense-outline-input"
+                      rows="7"
+                      placeholder="一行一个部分，例如：&#10;一、研究背景、目的与意义&#10;二、研究内容重点介绍&#10;三、研究成果"
+                    ></textarea>
+                  </label>
+                </div>
+
                 <div class="upload-toolbar defense-upload-toolbar">
                   <input
                     ref="fileInput"
@@ -93,12 +175,13 @@
                     </div>
                   </div>
                   <div class="defense-upload-actions">
-                    <el-button size="large" :loading="uploading" @click="openFilePicker">
+                    <el-button size="large" :loading="uploading" :disabled="isBusy" @click="openFilePicker">
                       {{ uploading ? "解析中..." : uploadedFileName ? "替换文件" : "上传论文" }}
                     </el-button>
                     <el-button
                       v-if="uploadedFileName"
                       size="large"
+                      :disabled="isBusy"
                       @click="clearUploadedFile"
                     >
                       清空文件
@@ -129,11 +212,11 @@
                 </div>
 
                   <div class="editor-actions defense-actions">
-                    <el-button size="large" @click="handleClear">清空内容</el-button>
-                    <el-button size="large" :loading="pptLoading" @click="generatePpt">
+                    <el-button size="large" :disabled="isBusy" @click="handleClear">清空内容</el-button>
+                    <el-button size="large" :loading="pptLoading" :disabled="isBusy" @click="generatePpt">
                       {{ pptLoading ? "生成中..." : "只生成PPT" }}
                     </el-button>
-                    <el-button type="primary" size="large" :loading="flowLoading" @click="generateFullFlow">
+                    <el-button type="primary" size="large" :loading="flowLoading" :disabled="isBusy" @click="generateFullFlow">
                       {{ flowLoading ? "生成中..." : "一键生成完整流程" }}
                     </el-button>
                   </div>
@@ -196,8 +279,8 @@
                   </div>
 
                   <div class="editor-actions defense-actions">
-                    <el-button size="large" @click="copyText(pptContent, 'PPT内容')">复制 PPT 内容</el-button>
-                    <el-button type="primary" size="large" :loading="speechLoading" @click="generateSpeech">
+                    <el-button size="large" :disabled="isBusy" @click="copyText(pptContent, 'PPT内容')">复制 PPT 内容</el-button>
+                    <el-button type="primary" size="large" :loading="speechLoading" :disabled="isBusy" @click="generateSpeech">
                       {{ speechLoading ? "生成中..." : "生成答辩稿" }}
                     </el-button>
                   </div>
@@ -229,7 +312,7 @@
                   </div>
 
                   <div class="editor-actions defense-actions">
-                    <el-button size="large" @click="copyText(speechContent, '答辩稿')">复制答辩稿</el-button>
+                    <el-button size="large" :disabled="isBusy" @click="copyText(speechContent, '答辩稿')">复制答辩稿</el-button>
                   </div>
                 </article>
               </section>
@@ -242,7 +325,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useAuthStore } from "../stores/auth";
@@ -252,6 +335,7 @@ import FeatureSidebar from "../components/FeatureSidebar.vue";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const DEFENSE_DEFAULTS_KEY = "defense_generation_defaults";
 
 const thesisText = ref("");
 const pptContent = ref("");
@@ -264,6 +348,96 @@ const flowLoading = ref(false);
 const pptViewMode = ref("preview");
 const thesisViewMode = ref("preview");
 const fileInput = ref(null);
+const generationConfig = ref({
+  ppt_page_count: 5,
+  ppt_outline: [
+    "一、研究背景、目的与意义",
+    "二、研究内容重点介绍",
+    "三、研究成果",
+    "四、个人观点",
+    "五、致谢",
+  ].join("\n"),
+  speech_duration_minutes: 4,
+  language_style: "更直白",
+  persona_style: "普通本科生",
+  content_density: "精简",
+  include_acknowledgement: true,
+  include_personal_view: true,
+});
+const isBusy = computed(
+  () => uploading.value || pptLoading.value || speechLoading.value || flowLoading.value
+);
+const busyStatusText = computed(() => {
+  if (uploading.value) {
+    return "正在解析论文文件，请勿重复提交。";
+  }
+
+  if (flowLoading.value) {
+    return "正在生成完整答辩流程，请勿重复提交。";
+  }
+
+  if (pptLoading.value) {
+    return "正在生成答辩PPT，请勿重复提交。";
+  }
+
+  if (speechLoading.value) {
+    return "正在生成答辩稿，请勿重复提交。";
+  }
+
+  return "";
+});
+
+const DEFENSE_PRESETS = {
+  compact: {
+    ppt_page_count: 5,
+    speech_duration_minutes: 3,
+    language_style: "更直白",
+    persona_style: "普通本科生",
+    content_density: "精简",
+    include_acknowledgement: true,
+    include_personal_view: true,
+    ppt_outline: [
+      "一、研究背景、目的与意义",
+      "二、研究内容重点介绍",
+      "三、研究成果",
+      "四、个人观点",
+      "五、致谢",
+    ].join("\n"),
+  },
+  standard: {
+    ppt_page_count: 5,
+    speech_duration_minutes: 4,
+    language_style: "更直白",
+    persona_style: "普通本科生",
+    content_density: "标准",
+    include_acknowledgement: true,
+    include_personal_view: true,
+    ppt_outline: [
+      "一、研究背景、目的与意义",
+      "二、研究思路与方法",
+      "三、研究内容重点介绍",
+      "四、研究成果",
+      "五、个人观点与致谢",
+    ].join("\n"),
+  },
+  steady: {
+    ppt_page_count: 6,
+    speech_duration_minutes: 4,
+    language_style: "更稳妥",
+    persona_style: "更谦虚稳妥",
+    content_density: "精简",
+    include_acknowledgement: true,
+    include_personal_view: true,
+    ppt_outline: [
+      "一、研究背景",
+      "二、研究目的与意义",
+      "三、研究内容与方法",
+      "四、研究成果",
+      "五、个人观点",
+      "六、致谢",
+    ].join("\n"),
+  },
+};
 
 const fallbackSectionTitles = [
   "研究背景、目的与意义",
@@ -272,6 +446,14 @@ const fallbackSectionTitles = [
   "个人观点",
   "致谢",
 ];
+
+const outlineSectionTitles = computed(() =>
+  generationConfig.value.ppt_outline
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => item.replace(/^[一二三四五六七八九十]+、\s*/, ""))
+);
 
 const parsedPptSections = computed(() => {
   const content = pptContent.value.trim();
@@ -292,7 +474,7 @@ const parsedPptSections = computed(() => {
   if (blocks.length) {
     return blocks.map((block, index) => {
       const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
-      const titleLine = lines.shift() || fallbackSectionTitles[index] || `第 ${index + 1} 部分`;
+      const titleLine = lines.shift() || outlineSectionTitles.value[index] || fallbackSectionTitles[index] || `第 ${index + 1} 部分`;
       return {
         index: index + 1,
         title: titleLine.replace(/^[一二三四五六七八九十]+、\s*/, ""),
@@ -308,10 +490,58 @@ const parsedPptSections = computed(() => {
 
   return paragraphs.slice(0, 5).map((paragraph, index) => ({
     index: index + 1,
-    title: fallbackSectionTitles[index] || `第 ${index + 1} 部分`,
+    title: outlineSectionTitles.value[index] || fallbackSectionTitles[index] || `第 ${index + 1} 部分`,
     lines: paragraph.split("\n").map((line) => line.trim()).filter(Boolean),
   }));
 });
+
+function buildGenerationPayload(extra = {}) {
+  return {
+    ...generationConfig.value,
+    ...extra,
+  };
+}
+
+function applyPreset(name) {
+  const preset = DEFENSE_PRESETS[name];
+  if (!preset) {
+    return;
+  }
+  generationConfig.value = {
+    ...generationConfig.value,
+    ...preset,
+  };
+  ElMessage.success("已应用预设模板");
+}
+
+async function loadGenerationDefaults() {
+  try {
+    const rawValue = localStorage.getItem(DEFENSE_DEFAULTS_KEY);
+    if (!rawValue) {
+      return;
+    }
+
+    const data = JSON.parse(rawValue);
+    generationConfig.value = {
+      ...generationConfig.value,
+      ...data,
+    };
+  } catch (error) {
+    console.warn("加载本地答辩默认配置失败，使用页面默认值", error);
+  }
+}
+
+async function saveGenerationDefaults() {
+  try {
+    localStorage.setItem(
+      DEFENSE_DEFAULTS_KEY,
+      JSON.stringify(buildGenerationPayload())
+    );
+    ElMessage.success("已保存为默认配置");
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, "保存默认配置失败"));
+  }
+}
 
 const speechParagraphs = computed(() =>
   speechContent.value
@@ -329,6 +559,9 @@ function ensureThesisText() {
 }
 
 async function generatePpt() {
+  if (isBusy.value) {
+    return;
+  }
   if (!ensureThesisText()) {
     return;
   }
@@ -336,7 +569,8 @@ async function generatePpt() {
   pptLoading.value = true;
   try {
     const { data } = await http.post("/defense/ppt", {
-      thesis_text: thesisText.value
+      thesis_text: thesisText.value,
+      ...buildGenerationPayload(),
     });
     pptContent.value = data.ppt_content;
     pptViewMode.value = "preview";
@@ -349,6 +583,9 @@ async function generatePpt() {
 }
 
 async function generateSpeech() {
+  if (isBusy.value) {
+    return;
+  }
   if (!ensureThesisText()) {
     return;
   }
@@ -361,7 +598,8 @@ async function generateSpeech() {
   try {
     const { data } = await http.post("/defense/speech", {
       thesis_text: thesisText.value,
-      ppt_content: pptContent.value
+      ppt_content: pptContent.value,
+      ...buildGenerationPayload(),
     });
     speechContent.value = data.speech_content;
     ElMessage.success("答辩稿已生成");
@@ -373,6 +611,9 @@ async function generateSpeech() {
 }
 
 async function generateFullFlow() {
+  if (isBusy.value) {
+    return;
+  }
   if (!ensureThesisText()) {
     return;
   }
@@ -380,7 +621,8 @@ async function generateFullFlow() {
   flowLoading.value = true;
   try {
     const { data } = await http.post("/defense/flow", {
-      thesis_text: thesisText.value
+      thesis_text: thesisText.value,
+      ...buildGenerationPayload(),
     });
     pptContent.value = data.ppt_content;
     speechContent.value = data.speech_content;
@@ -394,10 +636,17 @@ async function generateFullFlow() {
 }
 
 function openFilePicker() {
+  if (isBusy.value) {
+    return;
+  }
   fileInput.value?.click();
 }
 
 async function handleFileChange(event) {
+  if (isBusy.value) {
+    event.target.value = "";
+    return;
+  }
   const file = event.target.files?.[0];
   if (!file) {
     return;
@@ -459,4 +708,6 @@ function handleLogout() {
   authStore.logout();
   router.push("/login");
 }
+
+onMounted(loadGenerationDefaults);
 </script>

@@ -287,6 +287,18 @@ textarea {
   font-size: 0.96rem;
 }
 
+.submission-status-banner {
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(77, 91, 255, 0.16);
+  background: rgba(77, 91, 255, 0.08);
+  color: var(--primary-deep);
+  font-size: 0.93rem;
+  font-weight: 700;
+  line-height: 1.6;
+  box-shadow: 0 12px 24px rgba(77, 91, 255, 0.08);
+}
+
 .defense-layout {
   display: grid;
   grid-template-columns: 1.05fr 1fr 1fr;
@@ -364,6 +376,77 @@ textarea {
   line-height: 1.7;
 }
 
+.defense-config-panel {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.68);
+  display: grid;
+  gap: 14px;
+}
+
+.defense-config-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.defense-preset-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.defense-preset-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.defense-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.defense-config-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.defense-config-field span {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.defense-config-switches {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.compact-checkbox {
+  margin: 0;
+}
+
+.defense-config-outline {
+  grid-column: 1 / -1;
+}
+
+.defense-outline-input {
+  min-height: 150px;
+  resize: vertical;
+}
+
 .defense-upload-toolbar {
   margin-top: 16px;
   align-items: center;
@@ -392,6 +475,11 @@ textarea {
 
 .defense-thesis-box {
   min-height: 340px;
+}
+
+.defense-thesis-box textarea {
+  min-height: 320px;
+  height: 100%;
 }
 
 .document-preview-window {
@@ -707,7 +795,8 @@ textarea {
 
   .defense-workbench,
   .defense-hero-strip,
-  .ppt-slide-grid {
+  .ppt-slide-grid,
+  .defense-config-grid {
     grid-template-columns: 1fr;
   }
 
