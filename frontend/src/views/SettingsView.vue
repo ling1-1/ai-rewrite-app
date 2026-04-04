@@ -109,7 +109,7 @@
             <div class="form-group">
               <label for="defensePptPrompt">
                 答辩 PPT 提示词
-                <span class="hint">用于生成答辩 PPT 文字内容，支持变量 {thesis_text}。</span>
+                <span class="hint">用于生成答辩 PPT 文字内容。建议保留变量：{thesis_text}、{ppt_page_count}、{ppt_outline}、{language_style}、{persona_style}、{content_density}、{include_personal_view_text}、{include_acknowledgement_text}。</span>
               </label>
               <textarea
                 id="defensePptPrompt"
@@ -123,7 +123,7 @@
             <div class="form-group">
               <label for="defenseSpeechPrompt">
                 答辩稿提示词
-                <span class="hint">用于生成 3-4 分钟答辩稿，支持变量 {thesis_text} 和 {ppt_content}。</span>
+                <span class="hint">用于生成答辩稿。建议保留变量：{thesis_text}、{ppt_content}、{speech_duration_minutes}、{ppt_outline}、{language_style}、{persona_style}、{content_density}、{include_personal_view_text}、{include_acknowledgement_text}。</span>
               </label>
               <textarea
                 id="defenseSpeechPrompt"

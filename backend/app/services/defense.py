@@ -1,3 +1,5 @@
+import json
+import re
 from typing import Optional
 
 import httpx
@@ -24,23 +26,24 @@ DEFENSE_SYSTEM_PROMPT = """
 DEFENSE_PPT_PROMPT_TEMPLATE = """
 请根据下面这篇论文内容，直接生成一份“答辩PPT文字版”，要求如下：
 
-1. 内容一定要精炼、直观、清晰，抓住重点。
-2. 当前语言风格要求：{language_style}。
-3. 当前表达视角：{persona_style}，语气保持谦虚稳妥。
-4. 当前内容密度：{content_density}，不要写太多，每个部分控制在适合 PPT 展示的长度。
-5. 本次 PPT 预计页数：{ppt_page_count} 页。
-6. 请严格按照下面这份大纲输出，每一部分单独成段：
+1. 你必须严格遵守本次前端传入的生成配置，不能自行忽略、删减或改写这些配置。
+2. 内容一定要精炼、直观、清晰，抓住重点。
+3. 当前语言风格要求：{language_style}。
+4. 当前表达视角：{persona_style}，语气保持谦虚稳妥。
+5. 当前内容密度：{content_density}，不要写太多，每个部分控制在适合 PPT 展示的长度。
+6. 本次 PPT 预计页数：{ppt_page_count} 页。
+7. 请严格按照下面这份大纲输出，每一部分单独成段：
 {ppt_outline}
-7. 是否包含个人观点：{include_personal_view_text}
-8. 是否包含致谢：{include_acknowledgement_text}
-9. 必须严格输出为 {ppt_page_count} 页，少一页或多一页都不可以。
-10. 每一页都必须使用下面这种固定格式，不能改写页标记，不能合并多页：
+8. 是否包含个人观点：{include_personal_view_text}
+9. 是否包含致谢：{include_acknowledgement_text}
+10. 必须严格输出为 {ppt_page_count} 页，少一页或多一页都不可以。
+11. 每一页都必须使用下面这种固定格式，不能改写页标记，不能合并多页：
 【第1页】页标题
 - 要点1
 - 要点2
 - 要点3
-11. 每页只保留 2 到 4 条要点，每条要点一句话，不要写成长段落，不要写成答辩稿。
-12. 除了上述页结构，不要输出额外说明、前言、总结提示或 markdown 代码块。
+12. 每页只保留 2 到 4 条要点，每条要点一句话，不要写成长段落，不要写成答辩稿，不要写“大家好”这类演讲开场。
+13. 除了上述页结构，不要输出额外说明、前言、总结提示或 markdown 代码块。
 
 论文内容如下：
 {thesis_text}
@@ -49,17 +52,21 @@ DEFENSE_PPT_PROMPT_TEMPLATE = """
 DEFENSE_SPEECH_PROMPT_TEMPLATE = """
 请根据下面的论文内容和答辩PPT内容，生成一份适合 {speech_duration_minutes} 分钟左右中文本科毕业答辩的答辩稿，要求如下：
 
-1. 内容一定要精炼、直观、清晰，讲重点。
-2. 当前语言风格要求：{language_style}。
-3. 当前表达视角：{persona_style}，表达直白自然，不要太书面化，不要太浮夸。
-4. 当前内容密度：{content_density}。
-5. 必须严格对应 PPT 大纲展开：
+1. 你必须严格遵守本次前端传入的生成配置，不能自行忽略、删减或改写这些配置。
+2. 内容一定要精炼、直观、清晰，讲重点。
+3. 当前语言风格要求：{language_style}。
+4. 当前表达视角：{persona_style}，表达直白自然，不要太书面化，不要太浮夸。
+5. 当前内容密度：{content_density}。
+6. 答辩时长必须控制在 {speech_duration_minutes} 分钟左右，不能明显过长。
+7. 必须严格对应 PPT 大纲展开：
 {ppt_outline}
-6. 是否包含个人观点：{include_personal_view_text}
-7. 是否包含致谢：{include_acknowledgement_text}
-4. 不需要介绍个人信息。
-5. 不要提论文不足、局限性、未来展望。
-6. 直接输出可朗读的答辩稿正文，不要再附加说明。
+8. 是否包含个人观点：{include_personal_view_text}
+9. 是否包含致谢：{include_acknowledgement_text}
+10. 不需要介绍个人信息。
+11. 不要提论文不足、局限性、未来展望。
+12. 这是一份“答辩讲稿”，不是 PPT 提纲。必须写成可直接朗读的自然段，不要写成 bullet 列表。
+13. 每一页 PPT 最多对应 1 到 2 个自然段，整体结构要和 PPT 页面一一对应。
+14. 直接输出可朗读的答辩稿正文，不要再附加说明。
 
 论文内容：
 {thesis_text}
@@ -89,8 +96,10 @@ def generate_defense_ppt(
         thesis_text=thesis_text,
         **context,
     )
+    prompt = f"{prompt}\n\n{_build_ppt_json_instruction(context)}"
 
-    return _call_chat_model(prompt, db=db)
+    raw_result = _call_chat_model(prompt, db=db)
+    return _normalize_ppt_output(raw_result, expected_pages=context["ppt_page_count"])
 
 
 def generate_defense_speech(
@@ -115,8 +124,10 @@ def generate_defense_speech(
         ppt_content=ppt_content,
         **context,
     )
+    prompt = f"{prompt}\n\n{_build_speech_json_instruction(context)}"
 
-    return _call_chat_model(prompt, db=db)
+    raw_result = _call_chat_model(prompt, db=db)
+    return _normalize_speech_output(raw_result)
 
 
 def generate_defense_flow(
@@ -240,6 +251,133 @@ def _build_generation_context(options: Optional[dict]) -> dict:
         "include_acknowledgement_text": "包含致谢" if options.get("include_acknowledgement", True) else "不包含致谢",
         "include_personal_view_text": "包含个人观点" if options.get("include_personal_view", True) else "不包含个人观点",
     }
+
+
+def _build_ppt_json_instruction(context: dict) -> str:
+    return (
+        "你必须只返回 JSON，不要输出解释、前言、Markdown 代码块或额外文字。\n"
+        "JSON 结构必须如下：\n"
+        "{\n"
+        '  "slides": [\n'
+        "    {\n"
+        '      "page": 1,\n'
+        '      "title": "第一页标题",\n'
+        '      "bullets": ["要点1", "要点2", "要点3"]\n'
+        "    }\n"
+        "  ]\n"
+        "}\n"
+        f"slides 数组长度必须严格等于 {context['ppt_page_count']}。\n"
+        "每页 bullets 必须是 2 到 4 条短句，不能写成长段落，不能输出答辩稿语气。"
+    )
+
+
+def _build_speech_json_instruction(context: dict) -> str:
+    return (
+        "你必须只返回 JSON，不要输出解释、前言、Markdown 代码块或额外文字。\n"
+        "JSON 结构必须如下：\n"
+        "{\n"
+        '  "sections": [\n'
+        "    {\n"
+        '      "page": 1,\n'
+        '      "title": "对应PPT页标题",\n'
+        '      "paragraphs": ["这一页对应的讲稿段落1", "这一页对应的讲稿段落2"]\n'
+        "    }\n"
+        "  ]\n"
+        "}\n"
+        f"sections 数组长度尽量贴近 {context['ppt_page_count']} 页 PPT，整体时长控制在 {context['speech_duration_minutes']} 分钟左右。\n"
+        "paragraphs 必须是可直接朗读的讲稿，不要改写成 PPT 要点。"
+    )
+
+
+def _normalize_ppt_output(raw_result: str, expected_pages: int) -> str:
+    payload = _extract_json_payload(raw_result)
+    slides = payload.get("slides")
+    if not isinstance(slides, list) or not slides:
+        raise DefenseServiceError("答辩PPT结构化解析失败：未找到 slides 数组。")
+
+    normalized_blocks = []
+    for index, slide in enumerate(slides, start=1):
+        if not isinstance(slide, dict):
+            continue
+
+        title = _clean_text(slide.get("title")) or f"第 {index} 页"
+        bullets = slide.get("bullets") or []
+        if isinstance(bullets, str):
+            bullets = [bullets]
+        bullets = [_clean_text(item) for item in bullets if _clean_text(item)]
+        bullets = bullets[:4]
+        if len(bullets) < 2:
+            bullets = bullets + ["请补充这一页的重点信息。"]
+
+        normalized_blocks.append(
+            "\n".join(
+                [f"【第{index}页】", title, *[f"- {bullet}" for bullet in bullets]]
+            )
+        )
+
+    if len(normalized_blocks) != expected_pages:
+        raise DefenseServiceError(
+            f"答辩PPT结构化解析失败：预期 {expected_pages} 页，实际只生成了 {len(normalized_blocks)} 页。"
+        )
+
+    return "\n\n".join(normalized_blocks)
+
+
+def _normalize_speech_output(raw_result: str) -> str:
+    payload = _extract_json_payload(raw_result)
+    sections = payload.get("sections")
+    if not isinstance(sections, list) or not sections:
+        raise DefenseServiceError("答辩稿结构化解析失败：未找到 sections 数组。")
+
+    parts = []
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        title = _clean_text(section.get("title"))
+        paragraphs = section.get("paragraphs") or []
+        if isinstance(paragraphs, str):
+            paragraphs = [paragraphs]
+        paragraphs = [_clean_text(item) for item in paragraphs if _clean_text(item)]
+        if not paragraphs:
+            continue
+
+        if title:
+            parts.append(title)
+        parts.extend(paragraphs)
+
+    if not parts:
+        raise DefenseServiceError("答辩稿结构化解析失败：没有解析到可用段落。")
+
+    return "\n\n".join(parts)
+
+
+def _extract_json_payload(raw_result: str) -> dict:
+    candidate = raw_result.strip()
+    fenced_match = re.search(r"```json\s*(\{[\s\S]*?\})\s*```", candidate, re.IGNORECASE)
+    if fenced_match:
+        candidate = fenced_match.group(1).strip()
+    else:
+        brace_match = re.search(r"(\{[\s\S]*\})", candidate)
+        if brace_match:
+            candidate = brace_match.group(1).strip()
+
+    try:
+        payload = json.loads(candidate)
+    except json.JSONDecodeError as exc:
+        raise DefenseServiceError("模型没有按约定返回 JSON，建议检查答辩提示词是否被改乱。") from exc
+
+    if not isinstance(payload, dict):
+        raise DefenseServiceError("模型返回的 JSON 结构不正确，顶层必须是对象。")
+
+    return payload
+
+
+def _clean_text(value: object) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    text = re.sub(r"^\*\*|\*\*$", "", text)
+    return text.strip()
 
 
 class _SafeFormatDict(dict):
