@@ -27,7 +27,10 @@ try:
         repo_id=SPACE_ID,
         repo_type=REPO_TYPE,
         commit_message="更新项目代码",
-        ignore_patterns=["__pycache__", "*.pyc", ".git", "venv", "node_modules", ".env", "*.log", "deploy_hf.py"],
+        ignore_patterns=[
+            "__pycache__", "*.pyc", ".git", "venv", "node_modules", 
+            ".env", "*.log", "deploy_hf.py", "HF_ENV_SETUP.md"
+        ],
     )
     print(f"✅ 推送成功！")
     print(f"🔗 查看：https://huggingface.co/spaces/{SPACE_ID}")

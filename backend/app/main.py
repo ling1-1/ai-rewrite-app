@@ -1,5 +1,6 @@
 import sys
 import logging
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,6 +18,13 @@ logger = logging.getLogger(__name__)
 
 logger.info("Starting AI Rewrite API")
 logger.info(f"App name: {settings.app_name}")
+
+# 检查环境变量
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    logger.info("DATABASE_URL is configured")
+else:
+    logger.warning("DATABASE_URL is NOT configured - API will start but DB requests will fail")
 
 # 延迟初始化数据库（不阻塞启动）
 logger.info("Database will be initialized on first request (lazy load)")
