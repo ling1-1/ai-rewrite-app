@@ -24,7 +24,7 @@ def initialize_database() -> None:
         print("=== Database tables already exist ===", file=sys.stderr, flush=True)
     except Exception as exc:
         print(f"=== Database initialization failed: {exc} ===", file=sys.stderr, flush=True)
-        raise
+        print("=== Continuing startup without database initialization ===", file=sys.stderr, flush=True)
 
 initialize_database()
 
