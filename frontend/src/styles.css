@@ -336,8 +336,53 @@ textarea {
 }
 
 .defense-heading h1 {
-  max-width: 980px;
-  font-size: clamp(2rem, 2.7vw, 3rem);
+  max-width: 760px;
+  font-size: clamp(2rem, 2.45vw, 3.2rem);
+}
+
+.defense-heading-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) 320px;
+  gap: 20px;
+  align-items: end;
+}
+
+.defense-heading-copy {
+  min-width: 0;
+}
+
+.defense-heading-summary {
+  padding: 18px 18px 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(199, 91, 57, 0.16);
+  background: linear-gradient(180deg, rgba(255, 251, 247, 0.92), rgba(255, 241, 228, 0.76));
+  box-shadow: var(--shadow-soft);
+}
+
+.defense-heading-summary strong {
+  display: block;
+  margin: 10px 0 8px;
+  font-size: 1.02rem;
+  color: var(--ink);
+}
+
+.defense-heading-summary p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.defense-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(199, 91, 57, 0.1);
+  color: var(--primary-deep);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .defense-hero-strip {
@@ -587,11 +632,12 @@ textarea {
 .ppt-slide-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
 .ppt-slide-card {
-  min-height: 156px;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
   padding: 18px;
   border-radius: 22px;
   background: linear-gradient(180deg, #fffdfa 0%, #fff4ea 100%);
@@ -800,6 +846,21 @@ textarea {
   font-size: 1.24rem;
 }
 
+.pane-ruler {
+  margin-top: 16px;
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px dashed rgba(199, 91, 57, 0.16);
+  color: rgba(116, 109, 100, 0.92);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .upload-toolbar {
   margin-top: 18px;
   padding: 18px 18px;
@@ -954,6 +1015,11 @@ textarea {
   .defense-config-grid,
   .workspace-overview-strip {
     grid-template-columns: 1fr;
+  }
+
+  .defense-heading-grid {
+    grid-template-columns: 1fr;
+    align-items: start;
   }
 
   .feature-sidebar {

@@ -23,9 +23,19 @@
         <main class="app-workspace-main">
           <section class="workspace-panel defense-page-panel">
             <div class="workspace-heading defense-heading">
-              <p class="section-kicker">Defense</p>
-              <h1>答辩 PPT 内容和答辩稿，分开生成，也能一键走完整流程。</h1>
-              <p>这页更适合“先看结构，再微调内容”。PPT 优先按板块预览，答辩稿按朗读节奏展示，不再是三块纯文本大框。</p>
+              <div class="defense-heading-grid">
+                <div class="defense-heading-copy">
+                  <p class="section-kicker">Defense</p>
+                  <h1>答辩 PPT 与答辩稿分开生成，也支持一键串联完整流程。</h1>
+                  <p>这页更适合“先看结构，再微调内容”。PPT 优先按板块预览，答辩稿按朗读节奏展示，不再是三块纯文本大框。</p>
+                </div>
+
+                <div class="defense-heading-summary">
+                  <span class="defense-summary-badge">Academic Flow</span>
+                  <strong>从论文正文到 PPT，再到答辩稿</strong>
+                  <p>先生成结构，再补稿子。页数、风格、时长和大纲都由你在左侧配置控制。</p>
+                </div>
+              </div>
             </div>
 
             <div class="defense-hero-strip">

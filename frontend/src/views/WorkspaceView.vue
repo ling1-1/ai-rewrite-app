@@ -57,6 +57,11 @@
                 <span class="muted">{{ sourceText.trim().length }} 字</span>
               </div>
 
+              <div class="pane-ruler">
+                <span>Thesis Source</span>
+                <span>{{ rewriteMode === "en" ? "EN Mode" : "ZH Mode" }}</span>
+              </div>
+
               <div class="rewrite-mode-bar">
                 <div class="rewrite-mode-group">
                   <span class="rewrite-mode-label">降重模式</span>
@@ -112,6 +117,11 @@
                   <h2 class="editor-title">论文处理结果</h2>
                 </div>
                 <span class="muted">{{ loading ? "处理中" : "已就绪" }}</span>
+              </div>
+
+              <div class="pane-ruler">
+                <span>Rewrite Output</span>
+                <span>{{ loading ? "Processing..." : "Ready" }}</span>
               </div>
 
               <div class="editor-box editor-result">
