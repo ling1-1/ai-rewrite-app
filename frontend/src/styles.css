@@ -449,53 +449,77 @@ textarea {
 
 .defense-config-panel {
   margin-top: 16px;
-  padding: 18px 18px;
+  padding: 22px 22px;
   border-radius: 24px;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(255, 252, 247, 0.92), rgba(253, 243, 231, 0.72));
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .defense-config-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.defense-config-head strong {
+  font-size: 1.08rem;
+  color: var(--ink);
+}
+
+.defense-config-head .muted {
+  max-width: 420px;
+  line-height: 1.7;
 }
 
 .defense-preset-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
   gap: 12px;
-  flex-wrap: wrap;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(199, 91, 57, 0.12);
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .defense-preset-actions {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
+}
+
+.defense-preset-actions .el-button {
+  margin: 0;
+  min-height: 38px;
+  border-radius: 14px;
 }
 
 .defense-config-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .defense-config-field {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
 .defense-config-field span {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--ink);
+}
+
+.defense-config-field .form-input,
+.defense-config-field .form-textarea {
+  border-radius: 16px;
+  border: 1px solid rgba(23, 32, 51, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .defense-config-switches {
@@ -507,6 +531,10 @@ textarea {
 
 .compact-checkbox {
   margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(23, 32, 51, 0.08);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .defense-config-outline {
@@ -514,20 +542,38 @@ textarea {
 }
 
 .defense-outline-input {
-  min-height: 150px;
+  min-height: 170px;
   resize: vertical;
 }
 
 .defense-upload-toolbar {
   margin-top: 16px;
-  align-items: center;
+  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+}
+
+.defense-upload-toolbar strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .defense-upload-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.defense-upload-actions .el-button {
+  margin: 0;
+  min-height: 42px;
+  border-radius: 14px;
 }
 
 .defense-file-meta {
@@ -540,8 +586,30 @@ textarea {
   font-size: 0.94rem;
 }
 
+.defense-file-meta span {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(23, 32, 51, 0.08);
+}
+
 .defense-actions {
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.defense-actions .el-button {
+  margin: 0;
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.defense-actions .el-button:last-child {
+  grid-column: 1 / -1;
 }
 
 .defense-thesis-box {
@@ -928,12 +996,24 @@ textarea {
 
 .history-item strong {
   min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 800;
   word-break: break-word;
   line-height: 1.45;
 }
 
 .history-item-head {
   align-items: flex-start;
+}
+
+.history-item-title {
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .history-item-actions {
@@ -1044,6 +1124,7 @@ textarea {
   .defense-upload-toolbar {
     flex-direction: column;
     align-items: flex-start;
+    grid-template-columns: 1fr;
   }
 
   .history-item-actions {
