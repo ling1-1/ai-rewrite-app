@@ -29,6 +29,24 @@
             <p>这一版先聚焦论文改写最常用的流程，让整个工作区更直接、更顺手。</p>
           </div>
 
+          <div class="workspace-overview-strip">
+            <div class="workspace-overview-item">
+              <span class="overview-eyebrow">双模式</span>
+              <strong>中文 / 英文分开处理</strong>
+              <p>同一个工作台里切换改写模式，不用反复跳页面。</p>
+            </div>
+            <div class="workspace-overview-item">
+              <span class="overview-eyebrow">参考开关</span>
+              <strong>向量检索按次控制</strong>
+              <p>每次改写前自己决定要不要带 RAG 参考示例。</p>
+            </div>
+            <div class="workspace-overview-item">
+              <span class="overview-eyebrow">知识库闭环</span>
+              <strong>待入库、已入库、已更新入库</strong>
+              <p>历史记录和样本积累状态放在同一条链路里查看。</p>
+            </div>
+          </div>
+
           <div class="editor-grid">
             <article class="editor-card">
               <div class="editor-header">
@@ -160,16 +178,21 @@
                 </div>
               </div>
               <div class="history-text">{{ item.source_text }}</div>
-              <div class="history-meta">
-                {{
-                  item.history_status === 'updated'
-                    ? `已更新入库${item.vector_db_sync_count ? ` · 第 ${item.vector_db_sync_count} 次` : ""}${item.vector_db_synced_at ? ` · ${formatDate(item.vector_db_synced_at)}` : ""}`
-                    : item.is_in_vector_db
-                      ? `已入库${item.vector_db_synced_at ? ` · ${formatDate(item.vector_db_synced_at)}` : ""}`
-                      : item.is_favorite
-                        ? "已标记成功，待入库"
-                        : "点击可回填原文与结果"
-                }}
+              <div class="history-item-foot">
+                <div class="history-meta">
+                  {{
+                    item.history_status === 'updated'
+                      ? `已更新入库${item.vector_db_sync_count ? ` · 第 ${item.vector_db_sync_count} 次` : ""}${item.vector_db_synced_at ? ` · ${formatDate(item.vector_db_synced_at)}` : ""}`
+                      : item.is_in_vector_db
+                        ? `已入库${item.vector_db_synced_at ? ` · ${formatDate(item.vector_db_synced_at)}` : ""}`
+                        : item.is_favorite
+                          ? "已标记成功，待入库"
+                          : "点击可回填原文与结果"
+                  }}
+                </div>
+                <span class="history-stamp">
+                  {{ formatDate(item.updated_at || item.created_at) }}
+                </span>
               </div>
             </div>
           </div>

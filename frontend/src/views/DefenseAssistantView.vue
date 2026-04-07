@@ -262,11 +262,17 @@
                         :key="section.title"
                         class="ppt-slide-card"
                       >
-                        <div class="ppt-slide-index">{{ section.index }}</div>
+                        <div class="ppt-slide-head">
+                          <div class="ppt-slide-index">{{ section.index }}</div>
+                          <span class="ppt-slide-chip">答辩PPT</span>
+                        </div>
                         <h3>{{ section.title }}</h3>
-                        <p v-for="(line, lineIndex) in section.lines" :key="`${section.title}-${lineIndex}`">
-                          {{ line }}
-                        </p>
+                        <ul class="ppt-slide-bullets">
+                          <li v-for="(line, lineIndex) in section.lines" :key="`${section.title}-${lineIndex}`">
+                            {{ line }}
+                          </li>
+                        </ul>
+                        <div class="ppt-slide-footer">第 {{ section.index }} 页 · 适合直接放进幻灯片</div>
                       </article>
                     </div>
                     <div v-else class="defense-empty-state">
